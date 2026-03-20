@@ -1,0 +1,17 @@
+{
+  "challenge_id": "12a4e9a2-2eb0-4d5e-8a30-d4a35a6881e2",
+  "nonce": "k3V5lP7sQ2zW9nM4xT1b",
+  "agent_assertion": "eyJhbGciOiJSUzI1NiIsImtpZCI6IjJmOWFlZjczMTJhOWQ4ZjAiLCJ0eXAiOiJhZ2VudCtqd3QifQ.eyJpc3MiOiJodHRwczovL2FjcC5leGFtcGxlLmNvbSIsInN1YiI6IjVmOGQ5ZjMyLTBjNGYtNGQyYS04YjRmLTBjMjc2ODBlNDFmOCJ9.signature",
+  "claims": {
+    "framework": "langgraph",
+    "environment": "production",
+    "runtime_class": "cloud_run",
+    "build_digest": "sha256:5b8e43d2c8f7f0ab32a9db38d4c1b14b7d0f6b2de3a8cd21f9308c4c65ad14f1"
+  },
+  "evidence": {
+    "type": "workload_identity",
+    "provider": "gcp",
+    "document_digest": "sha256:78a58d2bfce2d0d0a1e2e72d99bfa41b6cd06fbc94d0c1171c9f0a3a44fbd9d9"
+  },
+  "signature": "base64url-encoded-attestation-signature"
+}

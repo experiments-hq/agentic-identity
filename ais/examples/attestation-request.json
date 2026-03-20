@@ -1,0 +1,14 @@
+{
+  "challenge_id": "12a4e9a2-2eb0-4d5e-8a30-d4a35a6881e2",
+  "issuer": "https://acp.example.com",
+  "audience": "https://gateway.example.com",
+  "nonce": "k3V5lP7sQ2zW9nM4xT1b",
+  "issued_at": "2026-03-20T14:05:00Z",
+  "expires_at": "2026-03-20T14:10:00Z",
+  "requested_claims": [
+    "framework",
+    "environment",
+    "runtime_class",
+    "build_digest"
+  ]
+}

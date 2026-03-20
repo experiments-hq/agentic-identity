@@ -1,0 +1,17 @@
+{
+  "iss": "https://acp.example.com",
+  "sub": "5f8d9f32-0c4f-4d2a-8b4f-0c27680e41f8",
+  "aud": "https://gateway.example.com",
+  "iat": 1773642000,
+  "exp": 1773645600,
+  "jti": "bdfe8437-c7b9-4e4e-a385-229949d34d2d",
+  "agent_id": "5f8d9f32-0c4f-4d2a-8b4f-0c27680e41f8",
+  "org_id": "org-acme",
+  "team_id": "team-finance-automation",
+  "display_name": "Payments Reconciliation Agent",
+  "framework": "langgraph",
+  "environment": "production",
+  "attestation_level": "runtime_verified",
+  "runtime_class": "cloud_run",
+  "build_digest": "sha256:5b8e43d2c8f7f0ab32a9db38d4c1b14b7d0f6b2de3a8cd21f9308c4c65ad14f1"
+}

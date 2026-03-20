@@ -1,0 +1,6 @@
+.pytest_cache/
+__pycache__/
+*.pyc
+acp.db
+acp.egg-info/
+acp_data/

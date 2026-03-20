@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ACP Console</title>
+    <link rel="stylesheet" href="/console/styles.css" />
+  </head>
+  <body>
+    <div class="backdrop">
+      <div class="glow glow-one"></div>
+      <div class="glow glow-two"></div>
+      <div class="glow glow-three"></div>
+    </div>
+
+    <div id="authShell" class="auth-shell">
+      <section class="auth-panel">
+        <div class="auth-brand">
+          <div class="brand-mark">ACP</div>
+          <div>
+            <p class="eyebrow">Operator Access</p>
+            <h1>Enter ACP.</h1>
+            <p class="auth-copy">
+              A calm, focused surface for agent identity, approvals, policy, and traces.
+            </p>
+          </div>
+        </div>
+
+        <div class="auth-grid">
+          <div class="auth-story">
+            <div class="story-card">
+              <div class="story-label">Built For</div>
+              <div class="story-value">Platform and security teams</div>
+              <p>See what agents are doing, what is allowed, and where a human decision is required.</p>
+            </div>
+            <div class="story-card">
+              <div class="story-label">Demo Access</div>
+              <div class="story-value">Use your ACP admin token</div>
+              <p>Local demo default: <code>acp-demo-admin-token</code>. Override with <code>ACP_ADMIN_TOKEN</code> in your environment.</p>
+            </div>
+          </div>
+
+          <form id="loginForm" class="auth-form">
+            <div class="panel-topline">Secure Session</div>
+            <h2>Authenticate Operator</h2>
+            <p>Use a valid admin token to unlock the console and protected operator APIs.</p>
+            <label class="field">
+              <span>Admin Token</span>
+              <input id="adminToken" name="token" type="password" placeholder="Paste ACP admin token" autocomplete="current-password" required />
+            </label>
+            <button type="submit" class="primary-btn auth-submit">Enter Console</button>
+            <div id="authMessage" class="auth-message">Waiting for operator authentication.</div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <div class="shell locked">
+      <aside class="sidebar">
+        <div class="brand-card">
+          <div class="brand-row">
+            <div class="brand-mark">ACP</div>
+            <div>
+              <div class="brand-title">Agent Control Plane</div>
+              <div class="brand-subtitle">Operator console</div>
+            </div>
+          </div>
+          <p class="brand-copy">Identity, policy, approvals, observability, and audit in one place.</p>
+        </div>
+
+        <div class="sidebar-card operator-card">
+          <div class="sidebar-stat-label">Operator Session</div>
+          <div id="sessionState" class="session-state">Locked</div>
+          <button id="logoutButton" class="secondary-btn wide">Sign Out</button>
+        </div>
+
+        <div class="sidebar-card">
+          <label class="field compact">
+            <span>Org Focus</span>
+            <input id="orgFilter" type="text" placeholder="Optional org_id" />
+          </label>
+          <button id="refreshAll" class="secondary-btn wide">Refresh Control Plane</button>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-btn active" data-view="fleet">
+            <span class="nav-kicker">Registry</span>
+            <span class="nav-label">Fleet Registry</span>
+          </button>
+          <button class="nav-btn" data-view="policy">
+            <span class="nav-kicker">Guardrails</span>
+            <span class="nav-label">Policy Editor</span>
+          </button>
+          <button class="nav-btn" data-view="traces">
+            <span class="nav-kicker">Telemetry</span>
+            <span class="nav-label">Trace Viewer</span>
+          </button>
+          <button class="nav-btn" data-view="approvals">
+            <span class="nav-kicker">Oversight</span>
+            <span class="nav-label">Approvals Queue</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-card quiet">
+          <div class="sidebar-stat-label">Console State</div>
+          <div id="statusPill" class="status-pill">Ready</div>
+          <p class="sidebar-note">A simple view of what changed and what needs attention.</p>
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="hero">
+          <div class="hero-copy">
+            <p class="eyebrow">Agent Governance</p>
+            <h1>Simple control for complex agent systems.</h1>
+            <p class="hero-text">Track identity, review approvals, inspect traces, and enforce policy from one quiet workspace.</p>
+            <div id="heroAttestation" class="hero-signal">
+              <div class="hero-signal-label">Attestation</div>
+              <div class="hero-signal-value">Runtime posture available</div>
+              <p class="hero-signal-copy">AIS-style runtime claims can be verified and enforced directly in policy.</p>
+            </div>
+          </div>
+          <div class="hero-panel">
+            <div class="hero-panel-label">Focus</div>
+            <div class="hero-panel-value">Less noise</div>
+            <p class="hero-panel-copy">The interface keeps the signal up front so teams can act quickly without digging through clutter.</p>
+          </div>
+        </header>
+
+        <section class="overview-strip">
+          <div id="overviewSnapshot" class="snapshot-grid"></div>
+          <div class="action-row">
+            <button id="runScenario" class="primary-btn">Run Demo Scenario</button>
+            <p class="action-note">Refresh the built-in demo story for a clean walkthrough.</p>
+          </div>
+        </section>
+
+        <section id="fleetView" class="view active">
+          <div class="section-header">
+            <div>
+              <p class="section-kicker">Fleet</p>
+              <h2>Agent Registry</h2>
+              <p>Every identity, team, framework, and environment in one glance.</p>
+            </div>
+          </div>
+          <div id="fleetStats" class="stats"></div>
+          <div class="grid dashboard-grid">
+            <div id="fleetTable" class="panel table-panel"></div>
+            <div id="fleetSpotlight" class="panel accent-panel"></div>
+          </div>
+        </section>
+
+        <section id="policyView" class="view">
+          <div class="section-header">
+            <div>
+              <p class="section-kicker">Policy</p>
+              <h2>Runtime Guardrails</h2>
+              <p>Shape what agents can do before they touch production systems.</p>
+            </div>
+          </div>
+          <div class="grid two-up">
+            <div class="panel accent-panel">
+              <div class="panel-topline">Authoring</div>
+              <h3>Create Policy</h3>
+              <form id="policyForm" class="form-stack">
+                <label class="field">
+                  <span>Org ID</span>
+                  <input name="org_id" type="text" placeholder="org-demo" required />
+                </label>
+                <div class="inline-fields">
+                  <label class="field">
+                    <span>Scope Level</span>
+                    <select name="scope_level">
+                      <option value="org">org</option>
+                      <option value="team">team</option>
+                      <option value="agent">agent</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span>Scope ID</span>
+                    <input name="scope_id" type="text" placeholder="org-demo" required />
+                  </label>
+                </div>
+                <label class="field">
+                  <span>Created By</span>
+                  <input name="created_by" type="text" value="console" />
+                </label>
+                <label class="field">
+                  <span>Policy YAML</span>
+                  <textarea name="dsl_source" rows="16"></textarea>
+                </label>
+                <button type="submit" class="primary-btn">Publish Guardrail</button>
+              </form>
+            </div>
+            <div class="panel">
+              <div class="panel-topline">Live Rules</div>
+              <h3>Active Policies</h3>
+              <div id="policyList" class="list"></div>
+            </div>
+          </div>
+        </section>
+
+        <section id="tracesView" class="view">
+          <div class="section-header">
+            <div>
+              <p class="section-kicker">Observability</p>
+              <h2>Trace Explorer</h2>
+              <p>Follow every run from policy check to tool output with cost and terminal state intact.</p>
+            </div>
+          </div>
+          <div class="grid traces-grid">
+            <div class="panel">
+              <div class="panel-topline">Recent Runs</div>
+              <h3>Trace Stream</h3>
+              <div id="traceList" class="list"></div>
+            </div>
+            <div class="panel accent-panel">
+              <div class="panel-topline">Selected Trace</div>
+              <h3>Execution Detail</h3>
+              <div id="traceDetail" class="detail empty-state">Select a trace to inspect spans.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="approvalsView" class="view">
+          <div class="section-header">
+            <div>
+              <p class="section-kicker">Human Oversight</p>
+              <h2>Approvals Queue</h2>
+              <p>See what is waiting on a decision and what has already been escalated or resolved.</p>
+            </div>
+          </div>
+          <div class="grid dashboard-grid">
+            <div id="approvalList" class="panel list"></div>
+            <div id="approvalSpotlight" class="panel accent-panel"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/console/app.js"></script>
+  </body>
+</html>
