@@ -132,7 +132,7 @@ async def run_demo(client: httpx.AsyncClient, base_url: str) -> None:
     # ── Step 1: Discovery ─────────────────────────────────────────────────────
     step(1, "Discover Issuer   GET /.well-known/agent-issuer")
 
-    resp = client.get("/.well-known/agent-issuer")
+    resp = await client.get("/.well-known/agent-issuer")
     resp.raise_for_status()
     issuer_meta = resp.json()
 
@@ -152,15 +152,15 @@ async def run_demo(client: httpx.AsyncClient, base_url: str) -> None:
 
     # Registering an agent first ensures a key pair exists
     # (JWKS is empty until at least one org registers an agent)
-    pre_reg = client.post("/api/agents/register", json={
+    pre_reg = await client.post("/api/agents/register", json={
         "org_id": "demo-org",
         "team_id": "demo-team",
         "display_name": "JWKS Seed Agent",
         "framework": "custom",
         "environment": "development",
-    }, headers={"x-acp-admin-token": "dev-token"})
+    }, headers={"x-acp-admin-token": "acp-demo-admin-token"})
 
-    jwks_resp = client.get("/.well-known/jwks.json")
+    jwks_resp = await client.get("/.well-known/jwks.json")
     jwks_resp.raise_for_status()
     jwks = jwks_resp.json()
 
@@ -180,14 +180,14 @@ async def run_demo(client: httpx.AsyncClient, base_url: str) -> None:
     # ── Step 3: Register agent ────────────────────────────────────────────────
     step(3, "Register Agent   POST /api/agents/register")
 
-    reg_resp = client.post("/api/agents/register", json={
+    reg_resp = await client.post("/api/agents/register", json={
         "org_id": "demo-org",
         "team_id": "payments-team",
         "display_name": "Payments Reconciliation Agent",
         "framework": "langgraph",
         "environment": "production",
         "tags": {"cost_center": "finance", "criticality": "high"},
-    }, headers={"x-acp-admin-token": "dev-token"})
+    }, headers={"x-acp-admin-token": "acp-demo-admin-token"})
     reg_resp.raise_for_status()
     reg = reg_resp.json()
 
@@ -223,7 +223,7 @@ async def run_demo(client: httpx.AsyncClient, base_url: str) -> None:
     # ── Step 5: Attest ────────────────────────────────────────────────────────
     step(5, "Attestation Challenge-Response   POST /v1/attestations/challenge")
 
-    challenge_resp = client.post("/v1/attestations/challenge", json={
+    challenge_resp = await client.post("/v1/attestations/challenge", json={
         "audience": f"{base_url}/gateway",
         "requested_claims": ["framework", "environment", "build_digest", "runtime_class"],
         "agent_id": agent["agent_id"],
@@ -245,7 +245,7 @@ async def run_demo(client: httpx.AsyncClient, base_url: str) -> None:
     else:
         print("\n[5b] Submit Attestation Response   POST /v1/attestations")
 
-    attest_resp = client.post("/v1/attestations", json={
+    attest_resp = await client.post("/v1/attestations", json={
         "challenge_id": challenge["challenge_id"],
         "nonce":         challenge["nonce"],
         # The agent assertion is the JWT issued at registration
