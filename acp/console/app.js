@@ -2,7 +2,8 @@ const state = {
   currentView: "fleet",
   selectedTraceId: null,
   authenticated: false,
-  latest: { agents: [], policies: [], traces: [], approvals: [] },
+  pendingDecision: {},
+  latest: { agents: [], policies: [], traces: [], approvals: [], budgets: [], auditEvents: [] },
 };
 
 const samplePolicy = `policy_id: "allow-attested-prod-sonnet"
@@ -28,8 +29,10 @@ document.addEventListener("DOMContentLoaded", () => {
   bindNav();
   bindRefresh();
   bindPolicyForm();
+  bindBudgetForm();
   bindDemoScenario();
   bindAuth();
+  bindAuditVerify();
   document.querySelector('textarea[name="dsl_source"]').value = samplePolicy;
   bootConsole();
 });
@@ -81,7 +84,7 @@ function bindAuth() {
       await fetch("/api/session/logout", { method: "POST" });
     } finally {
       setAuthenticated(false);
-      state.latest = { agents: [], policies: [], traces: [], approvals: [] };
+      state.latest = { agents: [], policies: [], traces: [], approvals: [], budgets: [], auditEvents: [] };
       document.getElementById("overviewSnapshot").innerHTML = "";
       document.getElementById("fleetStats").innerHTML = "";
       document.getElementById("fleetTable").innerHTML = emptyMarkup("Sign in to view the fleet.");
@@ -162,7 +165,7 @@ async function refreshAll() {
   if (!state.authenticated) return;
   setStatus("Refreshing control plane...");
   try {
-    await Promise.all([loadFleet(), loadPolicies(), loadTraces(), loadApprovals()]);
+    await Promise.all([loadFleet(), loadPolicies(), loadTraces(), loadApprovals(), loadBudgets(), loadAudit()]);
     renderOverview();
     setStatus("Control plane refreshed");
   } catch (error) {
@@ -378,19 +381,104 @@ async function loadApprovals() {
       document.getElementById("approvalSpotlight").innerHTML = emptyMarkup("Approval posture appears here when requests arrive.");
       return;
     }
-    container.innerHTML = approvals.map((item) => `
-      <article class="list-card">
-        ${statusPill(item.status, approvalClass(item.status))}
-        <h4>${escapeHtml(item.request_id)}</h4>
-        <p>${escapeHtml(item.agent_id)} · ${escapeHtml(item.action_type)}</p>
-        <p class="muted">Policy ${escapeHtml(item.policy_id || "unknown")} · expires ${escapeHtml(formatTimestamp(item.expires_at))}</p>
-        <pre>${escapeHtml(JSON.stringify(item.action_detail, null, 2))}</pre>
-      </article>`).join("");
+    container.innerHTML = approvals.map((item) => {
+      const isPending = item.status === "pending";
+      const decisionMeta = item.decided_by
+        ? `<p class="muted" style="margin-top:8px;">Decided by <strong>${escapeHtml(item.decided_by)}</strong>${item.decision_reason ? " — " + escapeHtml(item.decision_reason) : ""}</p>`
+        : "";
+      const actions = isPending ? `
+        <div class="approval-actions" style="margin-top:12px;">
+          <div class="action-row" style="gap:8px;">
+            <button class="primary-btn approve-btn" data-id="${escapeHtml(item.request_id)}" style="padding:8px 14px;font-size:0.85rem;background:#16a34a;">Approve</button>
+            <button class="secondary-btn deny-btn" data-id="${escapeHtml(item.request_id)}" style="padding:8px 14px;font-size:0.85rem;">Deny</button>
+            <button class="secondary-btn escalate-btn" data-id="${escapeHtml(item.request_id)}" style="padding:8px 14px;font-size:0.85rem;">Escalate</button>
+          </div>
+          <div class="decision-form" id="decision-form-${escapeHtml(item.request_id)}" style="display:none;margin-top:12px;">
+            <label class="field compact">
+              <span>Reason (optional)</span>
+              <input type="text" class="decision-reason" placeholder="Brief justification for audit record..." />
+            </label>
+            <div class="action-row" style="gap:8px;margin-top:6px;">
+              <button class="primary-btn confirm-decision-btn" data-id="${escapeHtml(item.request_id)}" style="padding:8px 14px;font-size:0.85rem;">Confirm</button>
+              <button class="secondary-btn cancel-decision-btn" data-id="${escapeHtml(item.request_id)}" style="padding:8px 14px;font-size:0.85rem;">Cancel</button>
+            </div>
+          </div>
+        </div>` : "";
+      const channels = item.notified_channels || [];
+      const notifyBadge = channels.length
+        ? `<p class="muted" style="margin-top:6px;">📣 Notified: ${channels.map((c) => `<code>${escapeHtml(c)}</code>`).join(", ")}</p>`
+        : `<p class="muted" style="margin-top:6px;opacity:0.6;">No notification channels configured</p>`;
+      return `
+        <article class="list-card">
+          ${statusPill(item.status, approvalClass(item.status))}
+          <h4>${escapeHtml(item.request_id)}</h4>
+          <p>${escapeHtml(item.agent_id)} · ${escapeHtml(item.action_type)}</p>
+          <p class="muted">Policy ${escapeHtml(item.policy_id || "unknown")} · expires ${escapeHtml(formatTimestamp(item.expires_at))}</p>
+          <pre>${escapeHtml(JSON.stringify(item.action_detail, null, 2))}</pre>
+          ${notifyBadge}
+          ${decisionMeta}
+          ${actions}
+        </article>`;
+    }).join("");
+    bindApprovalDecisions();
     renderApprovalSpotlight(approvals);
   } catch (error) {
     renderError("approvalList", error);
     renderError("approvalSpotlight", error);
   }
+}
+
+function bindApprovalDecisions() {
+  const container = document.getElementById("approvalList");
+
+  container.querySelectorAll(".approve-btn, .deny-btn, .escalate-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.dataset.id;
+      const action = btn.classList.contains("approve-btn") ? "approve" : btn.classList.contains("deny-btn") ? "deny" : "escalate";
+      state.pendingDecision[id] = action;
+      const form = document.getElementById(`decision-form-${id}`);
+      if (!form) return;
+      const confirmBtn = form.querySelector(".confirm-decision-btn");
+      const colors = { approve: "#16a34a", deny: "#d92d20", escalate: "#b7791f" };
+      confirmBtn.textContent = `Confirm ${action.charAt(0).toUpperCase() + action.slice(1)}`;
+      confirmBtn.style.background = colors[action];
+      form.style.display = "block";
+    });
+  });
+
+  container.querySelectorAll(".confirm-decision-btn").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const id = btn.dataset.id;
+      const action = state.pendingDecision[id];
+      if (!action) return;
+      const form = document.getElementById(`decision-form-${id}`);
+      const reason = form ? form.querySelector(".decision-reason").value.trim() : "";
+      try {
+        setStatus(`Submitting ${action}...`);
+        const response = await fetch(`/api/approvals/${id}/decide`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action, actor: "console-operator", reason: reason || null }),
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.detail || "Decision failed");
+        delete state.pendingDecision[id];
+        setStatus(`Decision recorded: ${action}`);
+        await loadApprovals();
+        await loadAudit();
+      } catch (error) {
+        setStatus(error.message, true);
+      }
+    });
+  });
+
+  container.querySelectorAll(".cancel-decision-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const form = document.getElementById(`decision-form-${btn.dataset.id}`);
+      if (form) form.style.display = "none";
+      delete state.pendingDecision[btn.dataset.id];
+    });
+  });
 }
 
 function renderApprovalSpotlight(approvals) {
@@ -488,6 +576,131 @@ function animateSnapshotValues() {
       if (progress < 1) requestAnimationFrame(tick);
     }
     requestAnimationFrame(tick);
+  });
+}
+
+async function loadBudgets() {
+  try {
+    const budgets = await fetchJson(`/api/budgets${toQuery({ org_id: getOrgFilter() })}`);
+    if (!budgets.length) {
+      state.latest.budgets = [];
+      document.getElementById("budgetList").innerHTML = emptyMarkup("No budget limits set. Use the form to cap agent spend by org, team, or agent.");
+      return;
+    }
+    const withUsage = await Promise.all(
+      budgets.map(async (b) => {
+        try {
+          const usage = await fetchJson(`/api/budgets/${b.budget_id}/usage`);
+          return { ...b, usage };
+        } catch {
+          return { ...b, usage: null };
+        }
+      })
+    );
+    state.latest.budgets = withUsage;
+    renderBudgetList(withUsage);
+  } catch (error) {
+    renderError("budgetList", error);
+  }
+}
+
+function renderBudgetList(budgets) {
+  document.getElementById("budgetList").innerHTML = budgets.map((b) => {
+    const usage = b.usage;
+    const pct = usage ? Math.min(Math.round(usage.pct_cost_used), 100) : 0;
+    const barClass = pct >= 95 ? "danger" : pct >= 80 ? "warn" : "";
+    const used = usage ? `$${Number(usage.used_cost_usd).toFixed(4)}` : "—";
+    const max = b.max_cost_usd != null ? `$${Number(b.max_cost_usd).toFixed(2)}` : "—";
+    const hardStop = usage && usage.hard_stopped ? statusPill("hard stopped", "danger") : "";
+    return `
+      <article class="list-card">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;">
+          ${statusPill(b.scope_level, "neutral")} ${statusPill(b.window, "neutral")} ${hardStop}
+        </div>
+        <h4>${escapeHtml(b.scope_id)}</h4>
+        <p class="muted">Limit ${escapeHtml(max)} · Used ${escapeHtml(used)} · ${escapeHtml(String(pct))}%</p>
+        <div class="utilization-track">
+          <div class="utilization-bar ${barClass}" style="width:${escapeHtml(String(pct))}%"></div>
+        </div>
+      </article>`;
+  }).join("");
+}
+
+function bindBudgetForm() {
+  document.getElementById("budgetForm").addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const raw = Object.fromEntries(new FormData(event.target).entries());
+    const payload = { ...raw };
+    if (payload.max_cost_usd) payload.max_cost_usd = Number(payload.max_cost_usd);
+    else delete payload.max_cost_usd;
+    try {
+      setStatus("Creating budget limit...");
+      const response = await fetch("/api/budgets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Budget create failed");
+      setStatus(`Budget limit set for ${data.scope_id}`);
+      event.target.reset();
+      await loadBudgets();
+    } catch (error) {
+      setStatus(error.message, true);
+    }
+  });
+}
+
+async function loadAudit() {
+  try {
+    const params = { limit: 50 };
+    if (getOrgFilter()) params.org_id = getOrgFilter();
+    const events = await fetchJson(`/api/audit/events${toQuery(params)}`);
+    state.latest.auditEvents = events;
+    renderAuditList(events);
+  } catch (error) {
+    renderError("auditList", error);
+  }
+}
+
+function renderAuditList(events) {
+  const container = document.getElementById("auditList");
+  if (!events || !events.length) {
+    container.innerHTML = emptyMarkup("No audit events yet. Activity will appear as agents are registered and policies are evaluated.");
+    return;
+  }
+  const outcomeClass = (o) => {
+    if (o === "success" || o === "approved" || o === "allow") return "";
+    if (o === "blocked" || o === "denied" || o === "failure") return "danger";
+    return "neutral";
+  };
+  container.innerHTML = events.map((e) => `
+    <article class="list-card audit-event">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+        ${statusPill(e.event_type, "neutral")} ${statusPill(e.outcome, outcomeClass(e.outcome))}
+      </div>
+      <p style="margin:0;"><strong>${escapeHtml(e.actor_id)}</strong> · ${escapeHtml(e.action)} on ${escapeHtml(e.resource_type)}</p>
+      <p class="muted" style="margin:4px 0 0;font-size:0.82rem;font-family:monospace;">${escapeHtml(e.resource_id)}</p>
+      <p class="muted" style="margin:4px 0 0;font-size:0.82rem;">${escapeHtml(formatTimestamp(e.timestamp))}</p>
+    </article>`).join("");
+}
+
+function bindAuditVerify() {
+  const btn = document.getElementById("verifyChain");
+  if (!btn) return;
+  btn.addEventListener("click", async () => {
+    btn.textContent = "Verifying…";
+    btn.disabled = true;
+    try {
+      const result = await fetchJson("/api/audit/verify");
+      const el = document.getElementById("chainStatus");
+      el.innerHTML = `<div class="chain-result ${result.valid ? "chain-ok" : "chain-fail"}">${result.valid ? "Chain intact — all events verified. Tamper-proof record confirmed." : "Tampering detected at event " + escapeHtml(result.tampered_event_id || "unknown")}</div>`;
+    } catch (error) {
+      document.getElementById("chainStatus").innerHTML = `<div class="chain-result chain-fail">${escapeHtml(error.message)}</div>`;
+    } finally {
+      btn.textContent = "Verify Chain Integrity";
+      btn.disabled = false;
+    }
   });
 }
 

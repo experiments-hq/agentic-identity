@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import delete
+from sqlalchemy import delete, text
 
 DEMO_ORG_ID = "00000000-0000-0000-0000-00000000demo"
 DEMO_ACTOR = "console-demo"
@@ -15,11 +15,14 @@ DEMO_POLICY_IDS = [
 DEMO_TRACE_IDS = [
     "44444444-4444-4444-4444-444444444441",
     "44444444-4444-4444-4444-444444444442",
+    "44444444-4444-4444-4444-444444444443",
+    "44444444-4444-4444-4444-444444444444",
 ]
 DEMO_APPROVAL_IDS = [
     "55555555-5555-5555-5555-555555555551",
     "55555555-5555-5555-5555-555555555552",
 ]
+DEMO_BUDGET_ID = "bb000000-0000-0000-0000-00000000demo"
 DEMO_AGENTS = [
     {
         "agent_id": "11111111-1111-1111-1111-111111111111",
@@ -44,6 +47,14 @@ DEMO_AGENTS = [
         "framework": "custom",
         "environment": "development",
         "tags": {"tier": "experimental", "owner": "ai-lab"},
+    },
+    {
+        "agent_id": "44444444-aaaa-bbbb-cccc-shadow000001",
+        "team_id": "team-unknown",
+        "display_name": "Shadow Billing Agent",
+        "framework": "custom",
+        "environment": "production",
+        "tags": {"tier": "unregistered", "owner": "unknown", "shadow": "true", "detected_by": "ais-fleet-scan"},
     },
 ]
 DEMO_POLICY_SPECS = [
@@ -115,6 +126,7 @@ async def seed_demo_data(db, *, replace_existing: bool = True) -> dict[str, int]
     from acp.models.agent import Agent, AgentCredential, RSAKeyPair
     from acp.models.approval import ApprovalDecision, ApprovalRequest
     from acp.models.audit import AuditEvent
+    from acp.models.budget import BudgetLimit, BudgetUsage  # noqa: F811
     from acp.models.policy import Policy, PolicyDecisionLog, PolicyVersion
     from acp.models.trace import AgentTrace, TraceSpan
     from acp.primitives.audit.logger import EventType, log_event
@@ -132,12 +144,10 @@ async def seed_demo_data(db, *, replace_existing: bool = True) -> dict[str, int]
         await db.execute(delete(AgentCredential).where(AgentCredential.agent_id.in_([a["agent_id"] for a in DEMO_AGENTS])))
         await db.execute(delete(Agent).where(Agent.agent_id.in_([a["agent_id"] for a in DEMO_AGENTS])))
         await db.execute(delete(RSAKeyPair).where(RSAKeyPair.org_id == DEMO_ORG_ID))
-        await db.execute(
-            delete(AuditEvent).where(
-                (AuditEvent.actor_id == DEMO_ACTOR)
-                | (AuditEvent.resource_id.in_([a["agent_id"] for a in DEMO_AGENTS] + DEMO_TRACE_IDS + DEMO_APPROVAL_IDS + DEMO_POLICY_IDS))
-            )
-        )
+        await db.execute(delete(BudgetUsage).where(BudgetUsage.budget_id == DEMO_BUDGET_ID))
+        await db.execute(delete(BudgetLimit).where(BudgetLimit.budget_id == DEMO_BUDGET_ID))
+        # Clear all audit events so the hash chain rebuilds from genesis (prevents TAMPERED on re-seed)
+        await db.execute(text("DELETE FROM audit_events"))
         await db.commit()
 
     now = datetime.now(tz=timezone.utc)
@@ -428,6 +438,129 @@ async def seed_demo_data(db, *, replace_existing: bool = True) -> dict[str, int]
         outcome="blocked",
         payload={"org_id": DEMO_ORG_ID, "trace_id": DEMO_TRACE_IDS[1], "table": "payments"},
     )
+
+    # ── Shadow agent detection trace ──────────────────────────────────────────
+    db.add(AgentTrace(
+        trace_id=DEMO_TRACE_IDS[2],
+        agent_id=DEMO_AGENTS[3]["agent_id"],
+        org_id=DEMO_ORG_ID,
+        team_id=DEMO_AGENTS[3]["team_id"],
+        started_at=now - timedelta(hours=2),
+        ended_at=now - timedelta(hours=2) + timedelta(minutes=1, seconds=12),
+        duration_ms=72000,
+        terminal_state="failure",
+        total_input_tokens=540,
+        total_output_tokens=0,
+        total_cost_usd=0.00162,
+        framework=DEMO_AGENTS[3]["framework"],
+        environment=DEMO_AGENTS[3]["environment"],
+    ))
+    db.add(TraceSpan(
+        span_id="77777777-7777-7777-7777-777777777771",
+        trace_id=DEMO_TRACE_IDS[2],
+        span_type="policy_check",
+        name="Shadow agent identity verification failed",
+        started_at=now - timedelta(hours=2),
+        ended_at=now - timedelta(hours=2) + timedelta(milliseconds=3),
+        duration_ms=3,
+        inputs={"agent_id": DEMO_AGENTS[3]["agent_id"], "team_id": "team-unknown"},
+        outputs={"decision": "deny", "reason": "agent registered outside approved onboarding — shadow agent detected"},
+        policy_decision="deny",
+        policy_id="deny-dev-prod-db-writes",
+        status="error",
+        error="shadow_agent_detected",
+    ))
+    await log_event(
+        db,
+        event_type=EventType.AGENT_REGISTERED,
+        actor_type="agent",
+        actor_id=DEMO_AGENTS[3]["agent_id"],
+        resource_type="agent",
+        resource_id=DEMO_AGENTS[3]["agent_id"],
+        action="shadow_detected",
+        outcome="blocked",
+        payload={"org_id": DEMO_ORG_ID, "team_id": "team-unknown", "flag": "unregistered_source"},
+    )
+
+    # ── Agent delegation chain trace ──────────────────────────────────────────
+    db.add(AgentTrace(
+        trace_id=DEMO_TRACE_IDS[3],
+        agent_id=DEMO_AGENTS[0]["agent_id"],
+        org_id=DEMO_ORG_ID,
+        team_id=DEMO_AGENTS[0]["team_id"],
+        started_at=now - timedelta(hours=1),
+        ended_at=now - timedelta(hours=1) + timedelta(minutes=2, seconds=8),
+        duration_ms=128000,
+        terminal_state="success",
+        total_input_tokens=3200,
+        total_output_tokens=940,
+        total_cost_usd=0.04128,
+        framework=DEMO_AGENTS[0]["framework"],
+        environment=DEMO_AGENTS[0]["environment"],
+    ))
+    db.add_all([
+        TraceSpan(
+            span_id="88888888-8888-8888-8888-888888888881",
+            trace_id=DEMO_TRACE_IDS[3],
+            span_type="policy_check",
+            name="Evaluate orchestrator delegation to support agent",
+            started_at=now - timedelta(hours=1),
+            ended_at=now - timedelta(hours=1) + timedelta(milliseconds=7),
+            duration_ms=7,
+            inputs={"delegating_agent": DEMO_AGENTS[0]["agent_id"], "target_agent": DEMO_AGENTS[1]["agent_id"]},
+            outputs={"decision": "allow", "delegation_scope": "read_only"},
+            policy_decision="allow",
+            policy_id="allow-attested-sonnet-in-prod",
+            status="ok",
+        ),
+        TraceSpan(
+            span_id="88888888-8888-8888-8888-888888888882",
+            trace_id=DEMO_TRACE_IDS[3],
+            span_type="llm_call",
+            name="Delegated: Support Triage summarize customer cases",
+            started_at=now - timedelta(hours=1) + timedelta(milliseconds=20),
+            ended_at=now - timedelta(hours=1) + timedelta(minutes=2, seconds=8),
+            duration_ms=127980,
+            model_id="claude-sonnet-4-6",
+            input_tokens=3200,
+            output_tokens=940,
+            cost_usd=0.04128,
+            inputs={"task": "Summarize 47 open support cases for finance review", "delegated_by": DEMO_AGENTS[0]["agent_id"]},
+            outputs={"status": 200, "summary": "High-priority: 8 billing disputes, 3 SLA breaches"},
+            policy_decision="allow",
+            policy_id="allow-attested-sonnet-in-prod",
+            status="ok",
+        ),
+    ])
+
+    # ── Budget limit for demo org ─────────────────────────────────────────────
+    budget = BudgetLimit(
+        budget_id=DEMO_BUDGET_ID,
+        org_id=DEMO_ORG_ID,
+        scope_level="org",
+        scope_id=DEMO_ORG_ID,
+        max_tokens=None,
+        max_cost_usd=500.00,
+        window="rolling_30d",
+        alert_thresholds=[50, 80, 95, 100],
+        alert_channels=["slack#finance-alerts"],
+        is_active=True,
+        created_by=DEMO_ACTOR,
+    )
+    db.add(budget)
+    await db.flush()
+    # Seed usage at ~12% utilization so the bar is visible
+    total_cost = sum([0.01236, 0.00096, 0.00162, 0.04128])
+    db.add(BudgetUsage(
+        budget_id=DEMO_BUDGET_ID,
+        window_start=now - timedelta(days=14),
+        window_end=now + timedelta(days=16),
+        used_tokens=5880,
+        used_cost_usd=total_cost,
+        hard_stopped=False,
+        model_breakdown={"claude-sonnet-4-6": round(0.01236 + 0.04128, 5), "claude-opus-4-6": round(0.00096 + 0.00162, 5)},
+        last_updated=now,
+    ))
 
     await db.commit()
     return {

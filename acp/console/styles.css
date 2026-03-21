@@ -90,8 +90,10 @@ body {
   position: fixed;
   inset: 0;
   z-index: 20;
-  display: grid;
-  place-items: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
   padding: 28px;
   background: rgba(245, 245, 247, 0.72);
   backdrop-filter: blur(18px);
@@ -106,6 +108,7 @@ body {
 
 .auth-panel {
   width: min(1080px, 100%);
+  margin: auto;
   padding: 28px;
   border-radius: 32px;
   border: 1px solid var(--line);
@@ -859,6 +862,57 @@ th {
 .status-pill.success {
   color: var(--accent);
   border-color: rgba(10, 132, 255, 0.14);
+}
+
+.utilization-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.07);
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.utilization-bar {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--accent);
+  transition: width 500ms ease;
+  min-width: 4px;
+}
+
+.utilization-bar.warn {
+  background: var(--warning);
+}
+
+.utilization-bar.danger {
+  background: var(--danger);
+}
+
+.chain-result {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 600;
+  font-size: 0.92rem;
+  margin-bottom: 16px;
+}
+
+.chain-ok {
+  background: rgba(22, 163, 74, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(22, 163, 74, 0.2);
+}
+
+.chain-fail {
+  background: rgba(217, 45, 32, 0.08);
+  color: var(--danger);
+  border: 1px solid rgba(217, 45, 32, 0.14);
+}
+
+.audit-event {
+  font-size: 0.9rem;
 }
 
 @keyframes growBar {

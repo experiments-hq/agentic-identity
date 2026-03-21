@@ -1,12 +1,21 @@
-"""Draft AIS attestation endpoints."""
+"""AIS attestation endpoints — challenge-response protocol for runtime agent verification."""
 from __future__ import annotations
 
+import base64
+import json
 import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from typing import Annotated
 
-from fastapi import APIRouter, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from pydantic import BaseModel, Field
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from acp.database import get_db_dependency
+from acp.models.agent import RSAKeyPair
+from acp.primitives.identity.credentials import verify_agent_jwt
 
 router = APIRouter(tags=["attestations"])
 
@@ -28,9 +37,9 @@ def _isoformat(value: datetime) -> str:
 
 def _prune_expired_challenges() -> None:
     now = _utcnow()
-    expired = [challenge_id for challenge_id, payload in _challenges.items() if payload["expires_at"] <= now]
-    for challenge_id in expired:
-        _challenges.pop(challenge_id, None)
+    expired = [cid for cid, c in _challenges.items() if c["expires_at"] <= now]
+    for cid in expired:
+        _challenges.pop(cid, None)
 
 
 class AttestationChallengeRequest(BaseModel):
@@ -50,7 +59,7 @@ class AttestationResponseRequest(BaseModel):
 
 @router.post("/v1/attestations/challenge", status_code=status.HTTP_201_CREATED)
 async def create_attestation_challenge(payload: AttestationChallengeRequest, request: Request):
-    """Issue a short-lived attestation challenge."""
+    """Issue a short-lived attestation challenge (AIS §8)."""
     _prune_expired_challenges()
     issued_at = _utcnow()
     challenge_id = str(uuid.uuid4())
@@ -81,32 +90,99 @@ async def create_attestation_challenge(payload: AttestationChallengeRequest, req
 
 
 @router.post("/v1/attestations")
-async def verify_attestation_response(payload: AttestationResponseRequest):
-    """Verify a draft AIS attestation response envelope."""
+async def verify_attestation_response(
+    payload: AttestationResponseRequest,
+    db: Annotated[AsyncSession, Depends(get_db_dependency)],
+):
+    """Verify an AIS attestation response — validates the agent assertion JWT against JWKS."""
     _prune_expired_challenges()
     challenge = _challenges.get(payload.challenge_id)
     if challenge is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Unknown or expired challenge")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Unknown or expired challenge",
+        )
     if challenge["nonce"] != payload.nonce:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Challenge nonce mismatch")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Challenge nonce mismatch",
+        )
     if not payload.agent_assertion or payload.agent_assertion.count(".") != 2:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid agent assertion format")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="agent_assertion must be a three-part JWT",
+        )
     if not payload.signature.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Signature is required")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Signature is required",
+        )
+
+    # ── Verify agent assertion JWT against JWKS ───────────────────────────────
+    jwt_verified = False
+    jwt_payload: dict = {}
+    jwt_error: str | None = None
+
+    try:
+        header_part = payload.agent_assertion.split(".")[0]
+        # Pad to a multiple of 4 for base64 decoding
+        header_json = base64.urlsafe_b64decode(header_part + "=" * (-len(header_part) % 4))
+        header = json.loads(header_json)
+        kid = header.get("kid")
+
+        if kid:
+            key_result = await db.execute(
+                select(RSAKeyPair).where(
+                    RSAKeyPair.key_id == kid,
+                    RSAKeyPair.is_active == True,  # noqa: E712
+                )
+            )
+            rsa_key = key_result.scalar_one_or_none()
+            if rsa_key:
+                jwt_payload = verify_agent_jwt(payload.agent_assertion, rsa_key.public_key_pem)
+                jwt_verified = True
+            else:
+                jwt_error = f"No active key found for kid '{kid}'"
+        else:
+            jwt_error = "JWT header missing 'kid'"
+
+    except ValueError as exc:
+        jwt_error = str(exc)
+    except Exception as exc:
+        jwt_error = f"JWT parse error: {exc}"
 
     _challenges.pop(payload.challenge_id, None)
 
-    satisfied_claims = sorted(set(challenge["requested_claims"]).intersection(payload.claims.keys()))
-    missing_claims = [claim for claim in challenge["requested_claims"] if claim not in payload.claims]
+    # ── Evaluate claims ───────────────────────────────────────────────────────
+    satisfied_claims = sorted(
+        set(challenge["requested_claims"]).intersection(payload.claims.keys())
+    )
+    missing_claims = [
+        c for c in challenge["requested_claims"] if c not in payload.claims
+    ]
 
-    return {
+    attestation_level = "assertion_verified" if jwt_verified else "envelope_only"
+
+    result: dict = {
         "verified": True,
         "challenge_id": payload.challenge_id,
         "issuer": challenge["issuer"],
         "audience": challenge["audience"],
-        "attestation_level": "draft-envelope-verified",
+        "attestation_level": attestation_level,
+        "jwt_verified": jwt_verified,
         "requested_claims": challenge["requested_claims"],
         "satisfied_claims": satisfied_claims,
         "missing_claims": missing_claims,
         "received_evidence_type": payload.evidence.get("type"),
     }
+
+    if jwt_payload:
+        result["agent_id"] = jwt_payload.get("agent_id")
+        result["org_id"] = jwt_payload.get("org_id")
+        result["framework"] = jwt_payload.get("framework")
+        result["environment"] = jwt_payload.get("environment")
+
+    if jwt_error:
+        result["jwt_verification_note"] = jwt_error
+
+    return result

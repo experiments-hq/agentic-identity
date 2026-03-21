@@ -45,14 +45,15 @@ An agent should be able to prove relevant runtime facts such as framework, envir
 
 ## Document Set
 
-- [SPEC.md](c:/Users/nenye/acp/ais/SPEC.md): normative core specification
-- [ATTESTATION.md](c:/Users/nenye/acp/ais/ATTESTATION.md): challenge-response attestation protocol
-- [schema/agent-identity.schema.json](c:/Users/nenye/acp/ais/schema/agent-identity.schema.json): canonical identity schema
-- [examples/issuer-metadata.json](c:/Users/nenye/acp/ais/examples/issuer-metadata.json): discovery metadata example
-- [examples/jwks.json](c:/Users/nenye/acp/ais/examples/jwks.json): JWKS example
-- [examples/agent-assertion.payload.json](c:/Users/nenye/acp/ais/examples/agent-assertion.payload.json): token payload example
-- [examples/attestation-request.json](c:/Users/nenye/acp/ais/examples/attestation-request.json): attestation challenge example
-- [examples/attestation-response.json](c:/Users/nenye/acp/ais/examples/attestation-response.json): attestation response example
+- [SPEC.md](./SPEC.md): normative core specification
+- [ATTESTATION.md](./ATTESTATION.md): challenge-response attestation protocol
+- [CONFORMANCE.md](./CONFORMANCE.md): implementer checklist (required vs. optional)
+- [schema/agent-identity.schema.json](./schema/agent-identity.schema.json): canonical identity schema
+- [examples/issuer-metadata.json](./examples/issuer-metadata.json): discovery metadata example
+- [examples/jwks.json](./examples/jwks.json): JWKS example
+- [examples/agent-assertion.payload.json](./examples/agent-assertion.payload.json): token payload example
+- [examples/attestation-request.json](./examples/attestation-request.json): attestation challenge example
+- [examples/attestation-response.json](./examples/attestation-response.json): attestation response example
 
 ## OpenID Connect Analogy
 

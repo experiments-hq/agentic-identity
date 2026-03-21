@@ -101,7 +101,7 @@ def create_agent_jwt(
     exp = now + exp_hours * 3600
     expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
 
-    header = {"alg": "RS256", "typ": "JWT", "kid": key_id}
+    header = {"alg": "RS256", "typ": "agent+jwt", "kid": key_id}
     payload = {
         "sub": agent_id,
         "agent_id": agent_id,

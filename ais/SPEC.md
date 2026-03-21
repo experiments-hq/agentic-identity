@@ -41,7 +41,7 @@ The canonical identity record contains:
 - `last_seen_at`
 - `tags`
 
-The normative JSON Schema is in [schema/agent-identity.schema.json](c:/Users/nenye/acp/ais/schema/agent-identity.schema.json).
+The normative JSON Schema is in [schema/agent-identity.schema.json](./schema/agent-identity.schema.json).
 
 ## 4. Discovery
 
@@ -60,7 +60,7 @@ The metadata document should include:
 - `supported_environment_values`
 - `spec_version`
 
-Example: [examples/issuer-metadata.json](c:/Users/nenye/acp/ais/examples/issuer-metadata.json)
+Example: [examples/issuer-metadata.json](./examples/issuer-metadata.json)
 
 ## 5. Agent Assertions
 
@@ -98,7 +98,7 @@ Optional claims:
 - `build_digest`
 - `runtime_class`
 
-Example payload: [examples/agent-assertion.payload.json](c:/Users/nenye/acp/ais/examples/agent-assertion.payload.json)
+Example payload: [examples/agent-assertion.payload.json](./examples/agent-assertion.payload.json)
 
 ## 6. Verification
 
@@ -126,7 +126,7 @@ AIS does not require a global online introspection endpoint, but issuers may exp
 
 AIS attestation is a challenge-response protocol that binds runtime facts to an agent assertion.
 
-Normative flow details are defined in [ATTESTATION.md](c:/Users/nenye/acp/ais/ATTESTATION.md).
+Normative flow details are defined in [ATTESTATION.md](./ATTESTATION.md).
 
 ## 9. Security Considerations
 

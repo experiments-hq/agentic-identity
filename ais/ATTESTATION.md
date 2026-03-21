@@ -36,7 +36,7 @@ The challenge request should contain:
 - `expires_at`
 - `requested_claims`
 
-Example: [examples/attestation-request.json](c:/Users/nenye/acp/ais/examples/attestation-request.json)
+Example: [examples/attestation-request.json](./examples/attestation-request.json)
 
 ## 5. Attestation Response
 
@@ -57,7 +57,7 @@ The `claims` object may include:
 - `deployment_id`
 - `host_class`
 
-Example: [examples/attestation-response.json](c:/Users/nenye/acp/ais/examples/attestation-response.json)
+Example: [examples/attestation-response.json](./examples/attestation-response.json)
 
 ## 6. Verification Rules
 

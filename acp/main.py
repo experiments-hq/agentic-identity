@@ -152,11 +152,11 @@ async def agent_issuer_metadata(request: Request):
         "issuer": issuer,
         "spec_version": "0.1-draft",
         "jwks_uri": f"{issuer}/.well-known/jwks.json",
-        "agent_registration_endpoint": f"{issuer}/v1/agents",
+        "agent_registration_endpoint": f"{issuer}/api/agents/register",
         "agent_attestation_endpoint": f"{issuer}/v1/attestations",
         "supported_signing_alg_values": [settings.jwt_algorithm],
         "supported_assertion_types": ["agent+jwt"],
-        "supported_framework_values": ["openclaw", "nemoclaw", "langgraph", "crewai", "autogen", "custom"],
+        "supported_framework_values": ["langgraph", "crewai", "autogen", "custom", "openclaw", "nemoclaw"],
         "supported_environment_values": ["development", "staging", "production"],
     }
 

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ais-verify"
+version = "0.1.0"
+description = "Standalone verifier SDK for Agent Identity Specification (AIS) agent+jwt tokens"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Apache-2.0"}
+keywords = ["ais", "agent-identity", "jwt", "ai-security", "agent-identity-specification"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Security",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+dependencies = [
+    "cryptography>=43.0.0",
+    "httpx>=0.28.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/nokoro27/agent-identity"
+Specification = "https://github.com/nokoro27/agent-identity/blob/main/ais/SPEC.md"
+Issues = "https://github.com/nokoro27/agent-identity/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["ais_verify*"]

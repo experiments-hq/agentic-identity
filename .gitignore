@@ -1,6 +1,29 @@
-.pytest_cache/
+# Python
 __pycache__/
-*.pyc
-acp.db
-acp.egg-info/
-acp_data/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environments
+.env
+.venv
+venv/
+env/
+
+# Database
+*.db
+*.sqlite3
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

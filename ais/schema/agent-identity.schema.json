@@ -33,7 +33,7 @@
     },
     "framework": {
       "type": "string",
-      "enum": ["openclaw", "nemoclaw", "langgraph", "crewai", "autogen", "custom"]
+      "enum": ["langgraph", "crewai", "autogen", "custom"]
     },
     "environment": {
       "type": "string",

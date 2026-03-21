@@ -63,6 +63,7 @@ async def list_approvals(
             "decided_at": r.decided_at.isoformat() if r.decided_at else None,
             "decided_by": r.decided_by,
             "decision_reason": r.decision_reason,
+            "notified_channels": r.notified_channels or [],
         }
         for r in requests
     ]
