@@ -55,6 +55,8 @@ An agent should be able to prove relevant runtime facts such as framework, envir
 - [examples/attestation-request.json](./examples/attestation-request.json): attestation challenge example
 - [examples/attestation-response.json](./examples/attestation-response.json): attestation response example
 
+See also [RATIONALE.md](../RATIONALE.md) for the design reasoning behind key protocol decisions.
+
 ## OpenID Connect Analogy
 
 AIS is intentionally shaped like a machine-oriented cousin of OpenID Connect:

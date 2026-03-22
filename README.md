@@ -20,8 +20,8 @@ Agents built with LangGraph, CrewAI, AutoGen, or any custom runtime fit the same
 ## Quick Demo
 
 ```bash
-git clone https://github.com/nokoro27/agent-identity.git
-cd agent-identity
+git clone https://github.com/experiments-hq/agentic-identity.git
+cd agentic-identity
 pip install -e .
 python demo.py
 ```
@@ -200,4 +200,18 @@ Source: [`sdk/`](./sdk/) — only deps: `cryptography` + `httpx`
 
 `0.1-draft` — the specification and reference implementation are in active development. The protocol shape is stable; field names and endpoint paths may evolve before a 1.0 release.
 
-Feedback, issues, and pull requests welcome.
+---
+
+## Design Rationale
+
+The reasoning behind key decisions — why not OIDC directly, why RS256, why offline-first verification, why a separate attestation protocol, how AIS relates to SPIFFE and W3C VCs — is documented in [`RATIONALE.md`](./RATIONALE.md).
+
+---
+
+## Contributing
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for how to report issues, propose spec changes, and run the development environment.
+
+Version history is in [`CHANGELOG.md`](./CHANGELOG.md).
+
+Feedback, issues, and pull requests welcome. Particularly valuable input would come from agent framework authors, gateway vendors, model providers, workload identity practitioners, and identity standards groups.
