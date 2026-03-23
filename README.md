@@ -182,6 +182,20 @@ See [`docs/use-cases.md`](docs/use-cases.md) for more.
 
 ---
 
+## AIS and MCP
+
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) and AIS address different problems in the agent stack.
+
+**MCP handles data context.** It defines how agents discover and consume tools, resources, and structured data. MCP answers: *what can this agent access?*
+
+**AIS handles principal identity.** It defines who the agent is, who issued that identity, and whether it can be verified. AIS answers: *who is making this request, and can I trust the claim?*
+
+These are complementary. An agent can present an AIS assertion to identify itself, while using MCP to discover what tools are available. A gateway can verify the AIS assertion before routing MCP traffic. A policy system can enforce different rules based on the verified agent identity.
+
+AIS does not compete with MCP. It sits at a different layer: identity and trust rather than capability discovery.
+
+---
+
 ## Comparison
 
 AIS is often compared to:

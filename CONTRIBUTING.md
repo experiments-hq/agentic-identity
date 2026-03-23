@@ -98,6 +98,24 @@ The current version is `0.1-draft`. Until `1.0`, breaking changes may occur in m
 
 ---
 
+## Standards Engagement
+
+AIS is intended to become a standard, not remain a project. We are looking for input from people with standards experience.
+
+If you work in any of the following areas, your perspective is especially valuable:
+
+- **IETF OAuth Working Group** — AIS assertion format and issuer metadata are modeled on OAuth and OIDC patterns. If you see alignment opportunities, divergences that should be corrected, or gaps where existing RFCs already cover the ground, please open an issue.
+
+- **NIST AI Risk Management Framework** — AIS aims to support agent traceability and accountability goals in NIST AI RMF. If you are contributing to that framework or related AI standards efforts, we want to understand how agent identity fits into the broader risk management picture.
+
+- **OpenID Foundation** — If AIS should be structured as a profile or extension of an existing OpenID specification, we want to know. If there is an active working group that overlaps with this problem space, we would rather contribute there than maintain a parallel effort.
+
+- **Identity practitioners and IAM architects** — If you have deployed SPIFFE/SPIRE, OIDC federation, or large-scale service account systems, and you see problems with the AIS model, open an issue. We want the design to survive contact with real production environments.
+
+The long-term goal is to contribute AIS to a neutral standards body. See [`GOVERNANCE.md`](GOVERNANCE.md) for more on that intent.
+
+---
+
 ## License
 
 By contributing, you agree that your contributions will be licensed under the [MIT License](./LICENSE).
