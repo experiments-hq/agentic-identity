@@ -1,6 +1,21 @@
 # Examples
 
-This directory will contain runnable integration examples for AIS.
+Runnable examples showing how AIS works in practice.
+
+---
+
+## gateway_enforcement.py
+
+**The core AIS claim made concrete:** two agents share the same org and upstream API key, but the gateway distinguishes them by their individual signed identities and applies different policy to each.
+
+```bash
+# Requires a running ACP server with demo data
+acp serve &
+acp demo-seed
+python examples/gateway_enforcement.py
+```
+
+This directly demonstrates the scenario described in the AIS design rationale: policy enforcement on per-agent identity rather than on the underlying workload credential.
 
 ---
 

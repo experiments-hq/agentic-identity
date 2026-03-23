@@ -17,10 +17,10 @@ adapted for autonomous AI agents.
 Usage:
 
     # Self-contained (no server needed):
-    python demo.py
+    python demo/demo.py
 
     # Against a live ACP server:
-    python demo.py --url http://localhost:8000
+    python demo/demo.py --url http://localhost:8000
 
 """
 from __future__ import annotations

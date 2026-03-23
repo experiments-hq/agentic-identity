@@ -40,11 +40,11 @@ Keep pull requests focused. One logical change per PR.
 
 ## Spec Changes
 
-Changes to normative specification text (`ais/SPEC.md`, `ais/ATTESTATION.md`, `ais/CONFORMANCE.md`) require more discussion than code changes.
+Changes to normative specification text (`spec/SPEC.md`, `spec/ATTESTATION.md`, `spec/CONFORMANCE.md`) require more discussion than code changes.
 
 For non-trivial spec changes, open an issue first to discuss the proposal before writing a PR. This avoids wasted effort if the change is out of scope or conflicts with existing design decisions.
 
-The design constraints and rationale for existing decisions are documented in [RATIONALE.md](./RATIONALE.md). Proposals that conflict with those decisions should explain why the trade-off should be reconsidered.
+The design constraints and rationale for existing decisions are documented in [`docs/problem.md`](./docs/problem.md). Proposals that conflict with those decisions should explain why the trade-off should be reconsidered.
 
 **RFC 2119 keywords** (`MUST`, `SHOULD`, `MAY`) in the specification carry their standard meanings per [RFC 2119](https://www.rfc-editor.org/rfc/rfc2119). Changes that promote a `SHOULD` to a `MUST` or demote a `MUST` to a `SHOULD` are normative changes and require explicit justification.
 
@@ -53,8 +53,8 @@ The design constraints and rationale for existing decisions are documented in [R
 ## Development Setup
 
 ```bash
-git clone https://github.com/nokoro27/agent-identity.git
-cd agent-identity
+git clone https://github.com/experiments-hq/agentic-identity.git
+cd agentic-identity
 
 # Install with dev dependencies
 pip install -e ".[dev]"
@@ -63,10 +63,10 @@ pip install -e ".[dev]"
 pytest
 
 # Run the ACP reference server
-python -m acp.main
+acp serve
 
 # Run the protocol demo (self-contained, no server needed)
-python demo.py
+python demo/demo.py
 ```
 
 ---
@@ -82,7 +82,7 @@ python demo.py
 
 ## JSON Schema
 
-Changes to `ais/schema/agent-identity.schema.json` that add new required fields are breaking changes. New optional fields are non-breaking. Any schema change should be accompanied by updated examples in `ais/examples/`.
+Changes to `spec/schema/agent-identity.schema.json` that add new required fields are breaking changes. New optional fields are non-breaking. Any schema change should be accompanied by updated examples in `spec/examples/`.
 
 ---
 

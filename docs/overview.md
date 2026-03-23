@@ -260,15 +260,15 @@ The repository is at: **[github.com/experiments-hq/agentic-identity](https://git
 
 It contains:
 
-- **Normative specification and conformance requirements** — `ais/SPEC.md`, `ais/ATTESTATION.md`, `ais/CONFORMANCE.md`
+- **Normative specification and conformance requirements** — `spec/SPEC.md`, `spec/ATTESTATION.md`, `spec/CONFORMANCE.md`
 - **Standalone verifier SDK** (`ais-verify`) — offline `agent+jwt` verification with minimal dependencies
 - **Reference control plane implementation** — FastAPI + SQLite server implementing all AIS-required endpoints
 - **Canonical JSON Schema** for the AgentIdentity document
-- **Self-contained protocol demo** (`python demo.py`) for an end-to-end walkthrough
+- **Self-contained protocol demo** (`python demo/demo.py`) for an end-to-end walkthrough
 
 The intended deployment path is incremental. Organizations can begin by issuing and verifying AIS assertions at trust boundaries such as gateways or tool brokers, then layer in policy consumption and stronger attestation for higher-risk workflows. This makes AIS suitable for phased adoption rather than all-or-nothing replacement.
 
-The conformance requirements in `ais/CONFORMANCE.md` use RFC 2119 MUST/SHOULD/MAY language and define a concrete implementer checklist. The design rationale for major decisions is documented in [`RATIONALE.md`](https://github.com/experiments-hq/agentic-identity/blob/main/RATIONALE.md).
+The conformance requirements in `spec/CONFORMANCE.md` use RFC 2119 MUST/SHOULD/MAY language and define a concrete implementer checklist. The design rationale for major decisions is documented in [`docs/problem.md`](https://github.com/experiments-hq/agentic-identity/blob/main/docs/problem.md).
 
 ---
 
