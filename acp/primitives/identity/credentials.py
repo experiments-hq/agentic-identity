@@ -131,15 +131,26 @@ def create_agent_jwt(
     return token, jti, expires_at
 
 
+# Required AIS claims — must match sdk/ais_verify/_jwt.py
+_REQUIRED_CLAIMS: frozenset[str] = frozenset({
+    "iss", "sub", "aud", "iat", "exp", "jti",
+    "agent_id", "org_id", "team_id", "framework", "environment",
+})
+
+
 # ── JWT verification ──────────────────────────────────────────────────────────
 
 def verify_agent_jwt(
     token: str,
     public_key_pem: str,
+    *,
+    expected_issuer: Optional[str] = None,
+    expected_audience: Optional[str] = None,
 ) -> dict:
-    """Verify signature and expiry; return decoded payload dict.
+    """Verify an agent+jwt: header, signature, expiry, required claims, issuer, audience.
 
-    Raises ValueError on any failure.
+    Applies the same checks as the ais_verify SDK so ACP and external verifiers
+    share a single trust standard.  Raises ValueError on any failure.
     """
     parts = token.split(".")
     if len(parts) != 3:
@@ -148,19 +159,55 @@ def verify_agent_jwt(
     header_b64, payload_b64, sig_b64 = parts
     signing_input = f"{header_b64}.{payload_b64}".encode()
 
-    # Decode payload
-    payload_json = base64.urlsafe_b64decode(_pad(payload_b64))
-    payload = json.loads(payload_json)
+    # Decode header + payload
+    try:
+        header = json.loads(base64.urlsafe_b64decode(_pad(header_b64)))
+        payload = json.loads(base64.urlsafe_b64decode(_pad(payload_b64)))
+    except Exception as exc:
+        raise ValueError(f"Failed to decode JWT header/payload: {exc}") from exc
 
-    # Check expiry
-    if payload.get("exp", 0) < int(time.time()):
+    # Algorithm must be RS256 — reject none, HS256, and all other values
+    alg = header.get("alg")
+    if alg != "RS256":
+        raise ValueError(f"Unsupported algorithm: {alg!r}. AIS requires RS256.")
+
+    # Token type must be agent+jwt
+    typ = header.get("typ")
+    if typ != "agent+jwt":
+        raise ValueError(f"Invalid token type: {typ!r}. Expected 'agent+jwt'.")
+
+    # Expiry
+    exp = payload.get("exp")
+    if exp is None:
+        raise ValueError("JWT missing required claim 'exp'")
+    if exp < int(time.time()):
         raise ValueError("JWT expired")
 
-    # Verify signature
+    # Required AIS claims
+    for claim in _REQUIRED_CLAIMS:
+        if claim not in payload:
+            raise ValueError(f"JWT missing required AIS claim: '{claim}'")
+
+    # Issuer check
+    if expected_issuer is not None and payload.get("iss") != expected_issuer:
+        raise ValueError(
+            f"Issuer mismatch: expected {expected_issuer!r}, got {payload.get('iss')!r}"
+        )
+
+    # Audience check
+    if expected_audience is not None:
+        aud = payload.get("aud", [])
+        if isinstance(aud, str):
+            aud = [aud]
+        if expected_audience not in aud:
+            raise ValueError(
+                f"Audience mismatch: expected {expected_audience!r}, got {aud!r}"
+            )
+
+    # Signature
     from cryptography.hazmat.primitives.serialization import load_pem_public_key
     public_key = load_pem_public_key(public_key_pem.encode())
     signature = base64.urlsafe_b64decode(_pad(sig_b64))
-
     try:
         public_key.verify(signature, signing_input, padding.PKCS1v15(), hashes.SHA256())
     except Exception as exc:

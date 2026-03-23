@@ -273,7 +273,12 @@ async def authenticate_request(
     if not key:
         raise ValueError(f"Unknown key ID: {kid}")
 
-    payload = verify_agent_jwt(bearer_token, key.public_key_pem)
+    payload = verify_agent_jwt(
+        bearer_token,
+        key.public_key_pem,
+        expected_issuer=settings.issuer_url,
+        expected_audience=settings.issuer_url,
+    )
 
     jti = payload.get("jti")
     if jti in _revocation_cache:

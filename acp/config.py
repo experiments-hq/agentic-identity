@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     # ── Proxy ─────────────────────────────────────────────────────────────────
     host: str = "0.0.0.0"
     port: int = 8000
+    cors_allowed_origins: list[str] = ["*"]  # set ACP_CORS_ALLOWED_ORIGINS in production
 
     # ── Upstream LLM endpoints ────────────────────────────────────────────────
     anthropic_base_url: str = "https://api.anthropic.com"

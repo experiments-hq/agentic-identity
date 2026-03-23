@@ -108,17 +108,30 @@ async def test_agent_issuer_metadata_endpoint(client):
     data = resp.json()
     assert data["issuer"] == "http://test"
     assert data["jwks_uri"] == "http://test/.well-known/jwks.json"
-    assert data["agent_registration_endpoint"] == "http://test/v1/agents"
+    assert data["agent_registration_endpoint"] == "http://test/api/agents/register"
     assert data["agent_attestation_endpoint"] == "http://test/v1/attestations"
     assert data["supported_assertion_types"] == ["agent+jwt"]
     assert "custom" in data["supported_framework_values"]
 
 
 async def test_attestation_challenge_and_verify_flow(client):
+    # Register a real agent so we have a valid JWT to present
+    reg = await client.post("/api/agents/register", json={
+        "org_id": "org-attest",
+        "team_id": "team-attest",
+        "display_name": "Attestation Test Agent",
+        "framework": "langgraph",
+        "environment": "production",
+        "created_by": "test",
+    })
+    assert reg.status_code == 201
+    agent_id = reg.json()["agent"]["agent_id"]
+    token = reg.json()["token"]
+
     challenge_resp = await client.post("/v1/attestations/challenge", json={
         "audience": "http://test/gateway",
         "requested_claims": ["framework", "environment", "build_digest"],
-        "agent_id": "agent-demo-1",
+        "agent_id": agent_id,
     })
     assert challenge_resp.status_code == 201
     challenge = challenge_resp.json()
@@ -128,18 +141,19 @@ async def test_attestation_challenge_and_verify_flow(client):
     verify_resp = await client.post("/v1/attestations", json={
         "challenge_id": challenge["challenge_id"],
         "nonce": challenge["nonce"],
-        "agent_assertion": "header.payload.signature",
+        "agent_assertion": token,
         "claims": {
             "framework": "langgraph",
             "environment": "production",
         },
-        "evidence": {
-            "type": "workload_identity",
-        },
-        "signature": "signed-attestation-envelope",
+        "evidence": {"type": "workload_identity"},
+        "signature": "attestation-envelope-sig",
     })
     assert verify_resp.status_code == 200
     result = verify_resp.json()
     assert result["verified"] is True
+    assert result["jwt_verified"] is True
+    assert result["attestation_level"] == "assertion_verified"
     assert result["satisfied_claims"] == ["environment", "framework"]
     assert result["missing_claims"] == ["build_digest"]
+    assert result["agent_id"] == agent_id

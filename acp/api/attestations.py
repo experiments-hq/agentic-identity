@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from acp.config import settings
 from acp.database import get_db_dependency
 from acp.models.agent import RSAKeyPair
 from acp.primitives.identity.credentials import verify_agent_jwt
@@ -119,32 +120,39 @@ async def verify_attestation_response(
         )
 
     # ── Verify agent assertion JWT against JWKS ───────────────────────────────
+    # This verifies that the assertion was signed by a registered issuer key and
+    # that all required AIS claims are present and valid.  It does NOT verify
+    # hardware-backed runtime evidence; that requires platform-specific evidence
+    # verification which is out of scope for 0.1-draft.
     jwt_verified = False
     jwt_payload: dict = {}
     jwt_error: str | None = None
 
     try:
         header_part = payload.agent_assertion.split(".")[0]
-        # Pad to a multiple of 4 for base64 decoding
         header_json = base64.urlsafe_b64decode(header_part + "=" * (-len(header_part) % 4))
         header = json.loads(header_json)
         kid = header.get("kid")
 
-        if kid:
-            key_result = await db.execute(
-                select(RSAKeyPair).where(
-                    RSAKeyPair.key_id == kid,
-                    RSAKeyPair.is_active == True,  # noqa: E712
-                )
+        if not kid:
+            raise ValueError("JWT header missing 'kid'")
+
+        key_result = await db.execute(
+            select(RSAKeyPair).where(
+                RSAKeyPair.key_id == kid,
+                RSAKeyPair.is_active == True,  # noqa: E712
             )
-            rsa_key = key_result.scalar_one_or_none()
-            if rsa_key:
-                jwt_payload = verify_agent_jwt(payload.agent_assertion, rsa_key.public_key_pem)
-                jwt_verified = True
-            else:
-                jwt_error = f"No active key found for kid '{kid}'"
-        else:
-            jwt_error = "JWT header missing 'kid'"
+        )
+        rsa_key = key_result.scalar_one_or_none()
+        if not rsa_key:
+            raise ValueError(f"No active key found for kid '{kid}'")
+
+        jwt_payload = verify_agent_jwt(
+            payload.agent_assertion,
+            rsa_key.public_key_pem,
+            expected_issuer=settings.issuer_url,
+        )
+        jwt_verified = True
 
     except ValueError as exc:
         jwt_error = str(exc)
@@ -152,6 +160,13 @@ async def verify_attestation_response(
         jwt_error = f"JWT parse error: {exc}"
 
     _challenges.pop(payload.challenge_id, None)
+
+    # JWT must be valid for attestation to succeed
+    if not jwt_verified:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Agent assertion verification failed: {jwt_error}",
+        )
 
     # ── Evaluate claims ───────────────────────────────────────────────────────
     satisfied_claims = sorted(
@@ -161,9 +176,12 @@ async def verify_attestation_response(
         c for c in challenge["requested_claims"] if c not in payload.claims
     ]
 
-    attestation_level = "assertion_verified" if jwt_verified else "envelope_only"
+    # attestation_level reflects what was actually verified:
+    # "assertion_verified" — issuer-signed JWT is valid; claims are self-reported
+    # and not backed by hardware or platform attestation evidence in this version.
+    attestation_level = "assertion_verified"
 
-    result: dict = {
+    return {
         "verified": True,
         "challenge_id": payload.challenge_id,
         "issuer": challenge["issuer"],
@@ -174,15 +192,8 @@ async def verify_attestation_response(
         "satisfied_claims": satisfied_claims,
         "missing_claims": missing_claims,
         "received_evidence_type": payload.evidence.get("type"),
+        "agent_id": jwt_payload.get("agent_id"),
+        "org_id": jwt_payload.get("org_id"),
+        "framework": jwt_payload.get("framework"),
+        "environment": jwt_payload.get("environment"),
     }
-
-    if jwt_payload:
-        result["agent_id"] = jwt_payload.get("agent_id")
-        result["org_id"] = jwt_payload.get("org_id")
-        result["framework"] = jwt_payload.get("framework")
-        result["environment"] = jwt_payload.get("environment")
-
-    if jwt_error:
-        result["jwt_verification_note"] = jwt_error
-
-    return result

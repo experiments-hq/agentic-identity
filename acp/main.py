@@ -19,9 +19,30 @@ log = logging.getLogger("acp")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
 
+_DEFAULT_ADMIN_TOKEN = "acp-demo-admin-token"
+_DEFAULT_SECRET_KEY = "acp-dev-secret-key-change-me"
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info("ACP starting — env=%s", settings.env)
+
+    if settings.is_production:
+        errors: list[str] = []
+        if settings.admin_token == _DEFAULT_ADMIN_TOKEN:
+            errors.append("ACP_ADMIN_TOKEN is set to the default demo value — set a strong secret")
+        if settings.secret_key == _DEFAULT_SECRET_KEY:
+            errors.append("ACP_SECRET_KEY is set to the default dev value — set a strong secret")
+        if settings.cors_allowed_origins == ["*"]:
+            errors.append("ACP_CORS_ALLOWED_ORIGINS is '*' — restrict to your console origin")
+        if errors:
+            for msg in errors:
+                log.critical("PRODUCTION MISCONFIGURATION: %s", msg)
+            raise RuntimeError(
+                "ACP refused to start in production with insecure defaults:\n"
+                + "\n".join(f"  • {e}" for e in errors)
+            )
+
     await create_all_tables()
     log.info("Database tables ready")
     yield
@@ -43,7 +64,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=settings.cors_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
