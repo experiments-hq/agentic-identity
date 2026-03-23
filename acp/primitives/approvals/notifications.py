@@ -107,3 +107,44 @@ async def _notify_webhook(url: str, payload: dict) -> None:
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.post(url, json=payload)
         resp.raise_for_status()
+
+
+async def send_budget_alert(
+    *,
+    budget_id: str,
+    scope_level: str,
+    scope_id: str,
+    threshold_pct: float,
+    used_cost_usd: float,
+    max_cost_usd: float,
+    channels: list[str],
+) -> None:
+    """Dispatch a budget threshold alert to configured channels."""
+    text = (
+        f"*ACP Budget Alert* :warning:\n\n"
+        f"*Scope:* `{scope_level}` / `{scope_id}`\n"
+        f"*Threshold:* {threshold_pct:.0f}% crossed\n"
+        f"*Usage:* ${used_cost_usd:.4f} / ${max_cost_usd:.2f}\n"
+        f"*Budget ID:* `{budget_id}`"
+    )
+
+    for channel in channels:
+        try:
+            if channel.startswith("slack") and settings.slack_webhook_url:
+                async with httpx.AsyncClient(timeout=10) as client:
+                    resp = await client.post(
+                        settings.slack_webhook_url,
+                        json={"text": text, "blocks": [{"type": "section", "text": {"type": "mrkdwn", "text": text}}]},
+                    )
+                    resp.raise_for_status()
+            elif channel.startswith("http"):
+                await _notify_webhook(channel, {
+                    "budget_id": budget_id,
+                    "scope_level": scope_level,
+                    "scope_id": scope_id,
+                    "threshold_pct": threshold_pct,
+                    "used_cost_usd": used_cost_usd,
+                    "max_cost_usd": max_cost_usd,
+                })
+        except Exception as exc:
+            log.error("Failed to send budget alert to channel %s: %s", channel, exc)

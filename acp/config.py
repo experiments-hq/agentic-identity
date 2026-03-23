@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     openai_base_url: str = "https://api.openai.com"
 
     # ── Identity ──────────────────────────────────────────────────────────────
+    issuer_url: str = "http://localhost:8000"  # override via ACP_ISSUER_URL in production
     jwt_algorithm: str = "RS256"
     jwt_default_expiry_hours: int = 24
     jwt_rotation_overlap_hours: int = 1

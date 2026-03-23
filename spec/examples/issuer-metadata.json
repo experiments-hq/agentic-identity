@@ -2,7 +2,7 @@
   "issuer": "https://acp.example.com",
   "spec_version": "0.1-draft",
   "jwks_uri": "https://acp.example.com/.well-known/jwks.json",
-  "agent_registration_endpoint": "https://acp.example.com/v1/agents",
+  "agent_registration_endpoint": "https://acp.example.com/api/agents/register",
   "agent_attestation_endpoint": "https://acp.example.com/v1/attestations",
   "supported_signing_alg_values": ["RS256"],
   "supported_assertion_types": ["agent+jwt"],

@@ -210,5 +210,13 @@ async def _check_threshold_alerts(
             threshold, budget.budget_id, usage.used_cost_usd,
         )
 
-        # TODO: dispatch to notification channels (Slack, webhook)
-        # asyncio.create_task(send_budget_alert(budget, usage, threshold))
+        from acp.primitives.approvals.notifications import send_budget_alert
+        asyncio.create_task(send_budget_alert(
+            budget_id=budget.budget_id,
+            scope_level=budget.scope_level,
+            scope_id=budget.scope_id,
+            threshold_pct=threshold,
+            used_cost_usd=usage.used_cost_usd,
+            max_cost_usd=budget.max_cost_usd,
+            channels=budget.alert_channels,
+        ))

@@ -2,11 +2,17 @@
 AIS Live Agent Simulation — enterprise demo script.
 
 Simulates a real AI agent going through the full ACP governance stack:
-  1. Registers itself (AID-01 + AID-02)
-  2. Requests an attestation challenge and responds (AIS §8)
-  3. Makes a policy-allowed LLM call (policy_check span → allow)
-  4. Attempts a policy violation (dev agent writing to prod DB → deny)
-  5. Triggers a human approval request (high-risk Opus call → pending)
+  1.  Connects to ACP control plane (health check)
+  2.  AIS issuer discovery
+  3.  Registers itself (AID-01 + AID-02)
+  4.  Fetches JWKS and verifies JWT locally (AID-07)
+  5.  Attestation challenge-response (AIS §8)
+  6.  Policy simulation — allowed LLM call
+  7.  Policy simulation — require_approval escalation
+  8.  Policy simulation — denied violation (dev → prod)
+  9.  Credential rotation with overlap window (AID-03)
+  10. Audit log verification
+  11. Fleet registry lookup (AID-05)
 
 Run from the agent-identity directory:
     python -m acp.demo_agent
@@ -195,8 +201,8 @@ async def run_simulation(base_url: str, admin_token: str) -> None:
 
         await asyncio.sleep(0.8)
 
-        # ── Step 6b: Policy simulation — require_approval escalation ──────────
-        _step(6, "Policy simulation — high-risk Opus call (expect: require_approval)")
+        # ── Step 7: Policy simulation — require_approval escalation ───────────
+        _step(7, "Policy simulation — high-risk Opus call (expect: require_approval)")
         r = await client.post("/api/policies/simulate", json={
             "agent_id":    registered_agent_id,
             "org_id":      DEMO_ORG_ID,
@@ -218,8 +224,8 @@ async def run_simulation(base_url: str, admin_token: str) -> None:
 
         await asyncio.sleep(0.8)
 
-        # ── Step 7: Policy simulation — denied violation ──────────────────────
-        _step(7, "Policy simulation — dev agent writes to prod DB (expect: deny)")
+        # ── Step 8: Policy simulation — denied violation ──────────────────────
+        _step(8, "Policy simulation — dev agent writes to prod DB (expect: deny)")
         r = await client.post("/api/policies/simulate", json={
             "agent_id":    registered_agent_id,
             "org_id":      DEMO_ORG_ID,
@@ -241,8 +247,8 @@ async def run_simulation(base_url: str, admin_token: str) -> None:
 
         await asyncio.sleep(0.8)
 
-        # ── Step 8: Credential rotation (AID-03) ─────────────────────────────
-        _step(8, "Credential rotation with zero-downtime overlap (AID-03)")
+        # ── Step 9: Credential rotation (AID-03) ─────────────────────────────
+        _step(9, "Credential rotation with zero-downtime overlap (AID-03)")
         r = await client.post(f"/api/agents/{registered_agent_id}/rotate")
         r.raise_for_status()
         rot = r.json()
@@ -252,8 +258,8 @@ async def run_simulation(base_url: str, admin_token: str) -> None:
 
         await asyncio.sleep(0.8)
 
-        # ── Step 9: Check audit log ───────────────────────────────────────────
-        _step(9, "Audit log — verifying immutable record was written")
+        # ── Step 10: Check audit log ──────────────────────────────────────────
+        _step(10, "Audit log — verifying immutable record was written")
         r = await client.get(f"/api/audit/events?limit=200")
         r.raise_for_status()
         events = r.json()
@@ -269,8 +275,8 @@ async def run_simulation(base_url: str, admin_token: str) -> None:
 
         await asyncio.sleep(0.8)
 
-        # ── Step 10: Fleet registry ───────────────────────────────────────────
-        _step(10, "Fleet registry — agent now visible in control plane (AID-05)")
+        # ── Step 11: Fleet registry ───────────────────────────────────────────
+        _step(11, "Fleet registry — agent now visible in control plane (AID-05)")
         r = await client.get(f"/api/agents/{registered_agent_id}")
         r.raise_for_status()
         agent = r.json()

@@ -109,10 +109,11 @@ def create_agent_jwt(
         "team_id": team_id,
         "framework": framework,
         "environment": environment,
+        "iss": settings.issuer_url,
+        "aud": [settings.issuer_url],
         "iat": now,
         "exp": exp,
         "jti": jti,
-        "iss": "acp",
     }
 
     header_b64 = _b64url(json.dumps(header, separators=(",", ":")).encode())
