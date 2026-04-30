@@ -161,6 +161,6 @@ Being explicit about non-goals prevents scope creep and misuse:
 
 ## Status and Stability
 
-AIS 0.1-draft describes a protocol whose shape is stable. The design decisions above are considered settled. Field names, endpoint paths, and specific claim values may change before a 1.0 release based on implementation experience and community feedback.
+AIS 0.1-draft describes a protocol whose shape is stable. The design decisions above are considered settled. Field names, endpoint paths, and specific claim values evolve through implementation feedback and community contribution.
 
-The conformance requirements in [CONFORMANCE.md](./ais/CONFORMANCE.md) define exactly what is required, recommended, and optional for any implementation to be AIS-conformant.
+The conformance requirements in [CONFORMANCE.md](../spec/CONFORMANCE.md) define exactly what is required, recommended, and optional for any implementation to be AIS-conformant.

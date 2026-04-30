@@ -18,12 +18,12 @@ Initial public draft of the Agent Identity Specification.
 
 **Added**
 
-- `ais/SPEC.md` — normative core specification defining the AgentIdentity model, issuer discovery, agent assertions, verification, revocation, and attestation
-- `ais/ATTESTATION.md` — challenge-response attestation protocol with nonce binding and JWKS-backed JWT verification
-- `ais/CONFORMANCE.md` — implementer checklist with RFC 2119 MUST/SHOULD/MAY requirements across 9 conformance areas
-- `ais/schema/agent-identity.schema.json` — canonical JSON Schema for the AgentIdentity document
-- `ais/examples/` — example JSON documents: issuer metadata, JWKS, agent assertion payload, attestation request/response
-- `RATIONALE.md` — design rationale covering the identity gap problem, OIDC relationship, key design decisions, and non-goals
+- `spec/SPEC.md` — normative core specification defining the AgentIdentity model, issuer discovery, agent assertions, verification, revocation, and attestation
+- `spec/ATTESTATION.md` — challenge-response attestation protocol with nonce binding and JWKS-backed JWT verification
+- `spec/CONFORMANCE.md` — implementer checklist with RFC 2119 MUST/SHOULD/MAY requirements across 9 conformance areas
+- `spec/schema/agent-identity.schema.json` — canonical JSON Schema for the AgentIdentity document
+- `spec/examples/` — example JSON documents: issuer metadata, JWKS, agent assertion payload, attestation request/response
+- `docs/problem.md` — design rationale covering the identity gap problem, OIDC relationship, key design decisions, and non-goals
 
 **Spec decisions**
 
@@ -59,5 +59,5 @@ Initial public draft of the Agent Identity Specification.
 
 ---
 
-[Unreleased]: https://github.com/nokoro27/agent-identity/compare/v0.1-draft...HEAD
-[0.1-draft]: https://github.com/nokoro27/agent-identity/releases/tag/v0.1-draft
+[Unreleased]: https://github.com/experiments-hq/agentic-identity/compare/v0.1-draft...HEAD
+[0.1-draft]: https://github.com/experiments-hq/agentic-identity/releases/tag/v0.1-draft

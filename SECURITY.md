@@ -26,7 +26,7 @@ We will acknowledge reports within 48 hours and aim to provide a resolution time
 | `acp/` (reference implementation) | latest `main` |
 | `sdk/ais_verify` | latest `main` |
 
-The `0.1-draft` specification is in active development. Security issues that affect the protocol design are especially important to disclose before the specification stabilizes.
+Security issues that affect the protocol design are especially valuable to report.
 
 ---
 

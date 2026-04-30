@@ -94,13 +94,13 @@ AIS follows [Semantic Versioning](https://semver.org/) for specification version
 - **Minor** (`0.x.0`): new optional features, new SHOULD-level requirements
 - **Major** (`x.0.0`): breaking changes to required fields, endpoints, or token format
 
-The current version is `0.1-draft`. Until `1.0`, breaking changes may occur in minor versions with clear changelog entries.
+The current version is `0.1`. Breaking changes before 1.0 are documented in the changelog.
 
 ---
 
 ## Standards Engagement
 
-AIS is intended to become a standard, not remain a project. We are looking for input from people with standards experience.
+AIS is building toward formal standardization. We are looking for input from people with standards experience.
 
 If you work in any of the following areas, your perspective is especially valuable:
 

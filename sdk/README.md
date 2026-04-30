@@ -1,6 +1,6 @@
 # ais-verify
 
-Standalone verifier SDK for [Agent Identity Specification (AIS)](../ais/SPEC.md) `agent+jwt` tokens.
+Standalone verifier SDK for [Agent Identity Specification (AIS)](../spec/SPEC.md) `agent+jwt` tokens.
 
 Verify any AIS-issued agent assertion offline — no ACP server required, no governance stack, just the token and a JWKS.
 
@@ -144,6 +144,6 @@ No FastAPI. No SQLAlchemy. No database. No governance layer.
 
 ## Related
 
-- [AIS Specification](../ais/SPEC.md)
-- [AIS Conformance Requirements](../ais/CONFORMANCE.md)
+- [AIS Specification](../spec/SPEC.md)
+- [AIS Conformance Requirements](../spec/CONFORMANCE.md)
 - [Agent Control Plane (ACP)](../acp/) — full reference implementation with governance

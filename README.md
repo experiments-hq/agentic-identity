@@ -1,326 +1,220 @@
-# Agentic Identity (AIS)
+[![CI](https://github.com/experiments-hq/agentic-identity/actions/workflows/ci.yml/badge.svg)](https://github.com/experiments-hq/agentic-identity/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-**An open identity layer for autonomous AI agents.**
-AIS gives agents a portable, discoverable, offline-verifiable identity model designed for real-world trust, policy, and interoperability.
+# AIS — Identity Infrastructure for AI Agents
 
-## Why AIS exists
-
-AI agents are becoming active participants in software systems: they call APIs, use tools, access internal systems, and take actions across organizational boundaries.
-
-Today, most agents are represented as one of the following:
-- API keys
-- service accounts
-- application clients
-- user impersonations
-- framework-specific opaque IDs
-
-These approaches are often good enough for basic access, but they do not cleanly express **agent-native identity**, **portable trust**, or **runtime-aware verification**.
-
-AIS is designed to address that gap.
-
-## What AIS provides
-
-AIS is an open specification and reference implementation for agent identity, including:
-
-- **issuer discovery** for agent identity providers
-- **signed agent assertions**
-- **JWKS-based offline verification**
-- **challenge-response attestation**
-- **portable verification across runtimes and systems**
-- **clear separation between identity and enterprise control-plane policy**
-
-In practical terms, AIS helps answer questions like:
-
-- What agent is making this request?
-- Who issued this identity?
-- Can I verify it offline?
-- Can I trust its runtime posture?
-- What policy should apply to it?
+**The open identity layer that lets any system verify which agent is making a request, who issued that identity, and whether to trust it.**
 
 ---
 
-## Project structure
+## The Problem
 
-This repository contains two related but distinct layers:
+AI agents are calling APIs, executing tools, and taking actions across organizational boundaries — but most have no verifiable identity. They authenticate with shared API keys, borrowed user credentials, or framework-specific opaque IDs that no downstream system can independently verify.
 
-### 1. AIS — the open specification
-The specification defines the identity model, token format, metadata discovery, and attestation flow for autonomous agents.
+The numbers tell the story:
 
-See:
-- [`spec/SPEC.md`](spec/SPEC.md)
-- [`spec/ATTESTATION.md`](spec/ATTESTATION.md)
-- [`docs/architecture.md`](docs/architecture.md)
+- **88%** of organizations reported a confirmed or suspected AI agent security incident in the last year ([Gravitee 2026](https://www.gravitee.io/state-of-ai-agent-security))
+- **45.6%** rely on shared API keys for agent-to-agent authentication
+- **Only 21.9%** treat AI agents as independent identity-bearing entities
+- **OWASP LLM06** (Excessive Agency) identifies this as a top-10 LLM risk
+- A real-world financial services breach — prompt injection via a shipping address field led to unauthorized invoicing tool access and data exfiltration ([CyberArk 2026](https://www.cyberark.com/resources/blog/ai-agents-and-identity-risks-how-security-will-shift-in-2026))
 
-### 2. ACP — the reference implementation / control plane
-ACP is a reference implementation that issues and verifies agent identity and demonstrates how AIS can plug into enterprise policy and governance workflows.
+Every enterprise deploying agents is reinventing identity from scratch. Gateways cannot distinguish agent calls from generic service traffic. Policy engines lack portable claims. Post-incident attribution is guesswork.
 
-See:
-- [`acp/`](acp/)
-- [`demo/`](demo/)
-- [`examples/`](examples/)
+AIS fixes this.
 
 ---
 
-## Who this is for
+## Verify an Agent in 3 Lines
 
-AIS is designed for:
+```python
+from ais_verify import AgentVerifier
 
-- **AI platform teams** building agent infrastructure
-- **security and IAM teams** who need strong identity and verification for agent workloads
-- **API gateway and infrastructure teams** validating agent requests
-- **framework and platform authors** who want interoperable agent trust
-- **enterprise teams** that need auditable, policy-aware agent access
+verifier = AgentVerifier(issuer="https://acp.example.com")
+claims = await verifier.verify(token)
 
----
+print(claims.agent_id)     # "5f8d9f32-..."
+print(claims.org_id)       # "org-acme"
+print(claims.framework)    # "langgraph"
+print(claims.environment)  # "production"
+```
 
-## What makes AIS different
-
-AIS is built around a simple idea:
-
-> Agents should be first-class principals, not awkward approximations of users or service accounts.
-
-AIS is not trying to replace existing identity systems.
-It is designed to complement them by introducing an identity model that is better suited to autonomous software actors.
-
-Key properties:
-
-- **offline-verifiable**
-  Verifiers should not need a live call to a central control plane for every request.
-
-- **portable**
-  Agent identity should work across frameworks, runtimes, and organizational boundaries.
-
-- **runtime-aware**
-  Identity alone is not enough. AIS includes an attestation model for stronger trust decisions.
-
-- **extensible**
-  Governance, policy, approvals, and audit systems can be layered on top without making the identity layer proprietary.
+Offline verification. No issuer callback required. Works at any gateway, API, or service boundary.
 
 ---
 
 ## Quickstart
 
-### Read the architecture
-Start here if you want the conceptual model:
+### Docker (fastest)
 
-- [`docs/overview.md`](docs/overview.md)
-- [`docs/problem.md`](docs/problem.md)
-- [`docs/architecture.md`](docs/architecture.md)
+```bash
+docker build -t acp . && docker run -p 8000:8000 acp
+```
 
-### Read the spec
-Start here if you want protocol details:
+Open `http://localhost:8000/console/` for the governance console. API docs at `http://localhost:8000/docs`.
 
-- [`spec/SPEC.md`](spec/SPEC.md)
-- [`spec/ATTESTATION.md`](spec/ATTESTATION.md)
+### Local install
 
-### Run the demo
-Start here if you want to see the system end-to-end:
+```bash
+pip install -e ".[dev]"
+acp demo-seed
+acp serve
+```
 
-- [`demo/README.md`](demo/README.md)
+### Run the SDK standalone
 
-### Use the SDK
-Start here if you want to verify assertions in code:
+```bash
+cd sdk && pip install -e .
+```
 
-- [`sdk/README.md`](sdk/README.md)
+```python
+from ais_verify import verify_agent_jwt
 
----
-
-## Example flow
-
-A typical AIS flow looks like this:
-
-1. An agent receives identity from an issuer.
-2. The issuer publishes metadata and signing keys.
-3. The agent presents a signed assertion to a verifier.
-4. The verifier discovers issuer metadata and validates the assertion offline.
-5. If required, the verifier performs challenge-response attestation.
-6. Local policy decides whether to allow the requested action.
-
-This enables a verifier to make trust decisions without coupling every request to a centralized identity service.
+claims = await verify_agent_jwt(token, issuer="https://acp.example.com")
+```
 
 ---
 
-## Core concepts
+## What AIS Provides
 
-### Agent Issuer
-A trusted authority that mints identity for autonomous agents.
+**Identity primitives:**
+- Issuer discovery via `/.well-known/agent-issuer`
+- Signed agent assertions (`agent+jwt`) with agent-native claims
+- JWKS-based offline verification — no per-request issuer dependency
+- Challenge-response runtime attestation
+- Portable verification across frameworks, runtimes, and organizational boundaries
 
-### Agent Assertion
-A signed identity document presented by an agent to another system.
-
-### Verifier
-A service, gateway, or application that validates the agent's identity and optionally requests attestation.
-
-### Attestation
-A challenge-response mechanism that helps verify runtime integrity or execution posture beyond static identity claims.
-
-### Control Plane
-An optional management layer that can handle policy, approvals, audit, observability, and operational governance.
+**Control plane primitives (reference implementation):**
+- Identity registry and credential lifecycle
+- YAML-based policy engine (allow / deny / require_approval)
+- Human-in-the-loop approval workflows
+- Per-agent budget enforcement
+- Tamper-evident audit log with SHA-256 hash chain
+- Distributed tracing and observability
+- Incident replay
 
 ---
 
-## Use cases
+## Trust Flow
 
-AIS is especially useful for:
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Agent Issuer                         │
+│  /.well-known/agent-issuer   /.well-known/jwks.json         │
+│  /api/agents/register        /v1/attestations               │
+└───────────────────────┬─────────────────────────────────────┘
+                        │
+              (1) register + receive agent+jwt
+                        │
+                   ┌────▼─────┐
+                   │  Agent   │
+                   └────┬─────┘
+                        │
+              (2) present agent+jwt to verifier
+                        │
+                   ┌────▼──────────────────────────────────┐
+                   │  Verifier (gateway / API / service)   │
+                   │                                       │
+                   │  (3) validate JWT offline via JWKS    │
+                   │  (4) optionally request attestation   │
+                   │  (5) enforce local policy             │
+                   └───────────────────────────────────────┘
+```
 
-- **internal tool access**
-  Agents accessing internal APIs or business systems with verifiable identity
+---
 
-- **API gateway enforcement**
-  Gateways validating agent assertions before routing requests
+## Why AIS
 
-- **cross-system trust**
-  One platform verifying agents issued by another platform
+| Approach | Principal type | Offline verification | Agent-specific claims | Attestation | Portability |
+|---|---|---|---|---|---|
+| OIDC | Human user | Yes | No | No | High |
+| OAuth client credentials | Software client | Partial | No | No | Medium |
+| Service accounts | Workload / service | Depends on platform | No | No | Low |
+| SPIFFE / SVID | Workload | Yes (X.509) | No | No | Medium |
+| W3C VCs | General (human focus) | Yes | Custom | Partial | High |
+| Application JWTs | Ad hoc | Depends | Custom | No | Low |
+| **AIS** | **Autonomous agent** | **Yes** | **Yes** | **Yes** | **High** |
 
-- **audit and compliance**
-  Creating clearer provenance around agent actions and delegated access
-
-- **enterprise policy enforcement**
-  Applying security and governance rules to autonomous agents as first-class actors
-
-See [`docs/use-cases.md`](docs/use-cases.md) for more.
+See [`docs/comparison.md`](docs/comparison.md) for detailed analysis.
 
 ---
 
 ## AIS and MCP
 
-[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) and AIS address different problems in the agent stack.
+[Model Context Protocol (MCP)](https://modelcontextprotocol.io/) defines how agents discover and consume tools, resources, and structured data — *what can this agent access?*
 
-**MCP handles data context.** It defines how agents discover and consume tools, resources, and structured data. MCP answers: *what can this agent access?*
+AIS defines who the agent is, who issued that identity, and whether it can be verified — *who is making this request, and can I trust the claim?*
 
-**AIS handles principal identity.** It defines who the agent is, who issued that identity, and whether it can be verified. AIS answers: *who is making this request, and can I trust the claim?*
-
-These are complementary. An agent can present an AIS assertion to identify itself, while using MCP to discover what tools are available. A gateway can verify the AIS assertion before routing MCP traffic. A policy system can enforce different rules based on the verified agent identity.
-
-AIS does not compete with MCP. It sits at a different layer: identity and trust rather than capability discovery.
+These are complementary layers. An agent presents an AIS assertion to identify itself while using MCP to discover available tools. A gateway verifies the AIS assertion before routing MCP traffic. A policy engine enforces rules based on the verified agent identity.
 
 ---
 
-## Comparison
+## Enterprise and Cloud
 
-AIS is often compared to:
+**ACP Cloud** (coming soon) — hosted agent identity infrastructure with:
 
-- OIDC
-- OAuth client credentials
-- service accounts
-- SPIFFE / workload identity
-- application JWT patterns
+- Managed issuer and credential lifecycle
+- Enterprise SSO integration (SAML, OIDC federation)
+- Multi-tenant organization and team management
+- Compliance audit trail and reporting
+- Framework SDK marketplace and gateway plugins
 
-See [`docs/comparison.md`](docs/comparison.md) for where AIS fits and where it differs.
-
----
-
-## Current status
-
-AIS is currently in **draft stage**.
-
-This means:
-- the specification is still evolving
-- field names and flows may change
-- conformance guidance is incomplete
-- ecosystem integrations are still early
-
-If you are experimenting, building integrations, or evaluating design tradeoffs, this is a good time to engage.
-
-If you are looking for a stable production standard, treat the current version as early.
-
-See [`ROADMAP.md`](ROADMAP.md) for planned milestones.
+Contact: **experiments-hq@outlook.com**
 
 ---
 
-## Design principles
+## For Implementers
 
-AIS is guided by the following principles:
+### Specification
 
-- agents are not users
-- agent verification should be possible offline
-- identity and governance should be separable
-- trust decisions should be explainable and auditable
-- the ecosystem benefits from open, interoperable standards
+- [`spec/SPEC.md`](spec/SPEC.md) — token format, claims, discovery, verification
+- [`spec/ATTESTATION.md`](spec/ATTESTATION.md) — challenge-response attestation protocol
+- [`spec/CONFORMANCE.md`](spec/CONFORMANCE.md) — RFC 2119 implementer checklist
 
----
+### Core concepts
 
-## Security
+- **Agent Issuer** — trusted authority that mints agent identity and publishes signing keys
+- **Agent Assertion** (`agent+jwt`) — signed credential presented by an agent to any verifier
+- **Verifier** — gateway, API, or service that validates identity offline via JWKS
+- **Attestation** — challenge-response protocol for runtime integrity beyond static claims
+- **Control Plane** — optional governance layer for policy, approvals, audit, and observability
 
-Because AIS is a security-sensitive system, responsible disclosure matters.
+### Repository guide
 
-Please see [`SECURITY.md`](SECURITY.md) before reporting vulnerabilities.
-
-You should also review:
-- [`docs/threat-model.md`](docs/threat-model.md)
-- [`spec/ATTESTATION.md`](spec/ATTESTATION.md)
+| Directory | Contents |
+|---|---|
+| `spec/` | Normative specification and conformance requirements |
+| `sdk/` | `ais-verify` — standalone verifier SDK |
+| `acp/` | Reference implementation / control plane |
+| `docs/` | Architecture, comparisons, threat model, use cases |
+| `examples/` | Gateway enforcement and integration examples |
+| `demo/` | End-to-end protocol demo |
+| `tests/` | Test suite |
 
 ---
 
 ## Contributing
 
-We welcome feedback from:
-- identity practitioners
-- security engineers
-- AI platform teams
-- framework authors
-- API gateway vendors
-- researchers working on trustworthy agent systems
+See [`CONTRIBUTING.md`](CONTRIBUTING.md). High-impact areas: verifier integrations, gateway examples, framework adapters, conformance tests, threat model review.
 
-Please see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+## Security
 
-Good first contribution areas:
-- verifier integrations
-- gateway examples
-- framework adapters
-- conformance tests
-- threat-model review
-- protocol feedback
-
----
+AIS is a security-sensitive protocol. See [`SECURITY.md`](SECURITY.md) and [`docs/threat-model.md`](docs/threat-model.md) for responsible disclosure and protocol-level threat analysis.
 
 ## Roadmap
 
-Near-term priorities:
-- tighten the draft specification
-- improve conformance guidance
-- expand verifier and issuer examples
-- publish clearer framework and gateway integrations
-- mature attestation semantics
-- gather ecosystem feedback
-
-See [`ROADMAP.md`](ROADMAP.md) for details.
+See [`ROADMAP.md`](ROADMAP.md) for current milestones and what's next.
 
 ---
 
 ## FAQ
 
-### Is AIS trying to replace OIDC or SPIFFE?
-No. AIS is intended to address the identity needs of autonomous agents specifically, while remaining compatible with broader identity ecosystems where appropriate.
+**Is AIS trying to replace OIDC or SPIFFE?**
+No. AIS uses OIDC's trust architecture (issuer discovery, JWKS, offline verification) and complements SPIFFE's workload identity. It adds what neither provides: an agent-native assertion type with claims designed for autonomous software principals.
 
-### Is ACP required to use AIS?
-No. ACP is a reference implementation and control-plane example. AIS is intended to be usable independently of any single vendor or product.
+**Is ACP required to use AIS?**
+No. ACP is one reference implementation. Any system that implements the AIS spec endpoints can issue and verify agent identity. The spec and the product are separate.
 
-### Why not just use service accounts?
-Service accounts can authenticate software, but they do not always capture the semantics, trust posture, portability, or governance requirements of autonomous agents.
-
-### Why offline verification?
-Offline verification reduces latency, dependency on centralized infrastructure, and platform lock-in for every trust decision.
-
----
-
-## Repository guide
-
-- `docs/` — conceptual documentation, architecture, comparisons, and use cases
-- `spec/` — protocol and attestation specification
-- `acp/` — reference implementation / control plane
-- `sdk/` — verifier and issuer SDKs
-- `examples/` — runnable integration examples
-- `demo/` — end-to-end demo assets
-
----
-
-## Get involved
-
-We are especially interested in collaboration with:
-- agent framework authors
-- security and IAM teams
-- API gateway and infrastructure vendors
-- teams experimenting with real-world agent trust and governance
-
-If this space is relevant to your work, open an issue or start a discussion.
+**Why not just use service accounts?**
+Service accounts authenticate workloads, not agents. They do not carry agent-specific claims (framework, environment, team, attestation level), are not portable across platforms, and provide no runtime attestation model.

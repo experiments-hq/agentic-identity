@@ -1,0 +1,14 @@
+.git
+__pycache__
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+.env
+.env.*
+*.egg-info
+dist
+build
+.pytest_cache
+.mypy_cache
+.ruff_cache

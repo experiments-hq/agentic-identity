@@ -26,7 +26,7 @@ That is where AI agents appear to be now. Framework-local conventions can still 
 
 The value of a standard here is not only security. It is coordination leverage. A shared identity layer would reduce integration cost for vendors, increase portability for customers, and create a common trust substrate for agent-to-agent and agent-to-service interactions.
 
-The problem, then, is not whether existing building blocks exist. They do. The problem is that they do not yet converge on a single agent-native trust representation that heterogeneous systems can consume consistently.
+The problem, then, is not whether existing building blocks exist. They do. The problem is that they have not converged on a single agent-native trust representation that heterogeneous systems can consume consistently.
 
 ---
 
@@ -240,9 +240,9 @@ Its purpose is narrower and, for that reason, more actionable: to define an inte
 
 AIS is deployable without solving every downstream research problem. The core registration-and-verification model is implementable now. The following questions define the frontier for broader federation, stronger assurance, and richer policy composition.
 
-**Cross-issuer trust.** AIS 0.1 assumes a single issuer trust domain. In practice, high-value agent workflows will span multiple organizations, clouds, and control planes. SPIFFE/SPIRE, federated OIDC, and verifiable credential ecosystems all provide useful reference points. Whether one of those models transfers cleanly — or whether agent ecosystems need a hybrid trust architecture — remains open.
+**Cross-issuer trust.** AIS 0.1 assumes a single issuer trust domain. In practice, high-value agent workflows will span multiple organizations, clouds, and control planes. SPIFFE/SPIRE, federated OIDC, and verifiable credential ecosystems all provide useful reference points. AIS is designed to compose with these models as cross-issuer federation matures.
 
-**Hardware-backed attestation semantics.** The protocol can carry stronger evidence, but the semantics are not yet standardized. What exactly does `build_digest` attest to? How should enclave or TPM measurements be interpreted? What assurance taxonomy should `attestation_level` represent? Formalizing that trust hierarchy is a natural next step for the spec.
+**Hardware-backed attestation semantics.** The protocol can carry stronger evidence, and formalizing attestation semantics is an active development priority. What exactly does `build_digest` attest to? How should enclave or TPM measurements be interpreted? What assurance taxonomy should `attestation_level` represent? Formalizing that trust hierarchy is a natural next step for the spec.
 
 **Agent-to-agent authorization.** AIS establishes identity, not policy. That separation is deliberate. But in practice, the value of identity is realized only when policy engines can consume AIS claims consistently. Defining common integration patterns with authorization systems — OPA, Cedar, gateway-native policy engines, and capability models — is likely to be one of the most important practical extensions.
 

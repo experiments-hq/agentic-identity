@@ -1,69 +1,51 @@
 # Roadmap
 
-AIS is currently at `0.1-draft`. This document tracks what needs to happen before the specification can be considered stable, and what we are building toward beyond that.
+## Now (v0.1)
+
+**Ships today:**
+- Open specification: agent identity model, issuer discovery, signed assertions, offline verification, attestation protocol
+- Reference implementation (ACP): FastAPI server with all AIS endpoints + 7 governance primitives
+- Verifier SDK (`ais-verify`): offline `agent+jwt` verification with policy enforcement
+- Web governance console with identity registry, policy editor, audit viewer
+- Docker one-liner demo with seeded data
+- CI pipeline (GitHub Actions)
+
+**In progress:**
+- Go verifier SDK
+- TypeScript / Node verifier SDK
+- LangGraph and CrewAI framework integrations
+- API gateway enforcement examples (Kong, Envoy, AWS API Gateway)
 
 ---
 
-## Near-term (pre-1.0)
+## Next (v0.2–v0.3)
 
-### Specification
-
-- [ ] Tighten draft specification based on implementation and community feedback
-- [ ] Complete conformance guidance (MUST / SHOULD / MAY table)
-- [ ] Define normative claim vocabulary with precise semantics
-- [ ] Mature attestation semantics for common runtime environments (Cloud Run, EKS, Lambda, Nitro Enclaves)
-- [ ] Clarify cross-issuer trust model
-- [ ] Add extensibility points for custom claims
-
-### Reference implementation (ACP)
-
-- [ ] Replace in-process approval wait with a webhook / callback model
-- [ ] Add Alembic migrations for schema evolution
-- [ ] PostgreSQL deployment documentation
-- [ ] Multi-worker safe attestation challenge store (move from in-memory to DB)
-
-### SDK
-
-- [ ] Expand `ais_verify` to include an issuer SDK (not just verifier)
-- [ ] Go verifier implementation
-- [ ] TypeScript / Node verifier implementation
-
-### Ecosystem
-
-- [ ] LangGraph integration example
-- [ ] CrewAI integration example
-- [ ] API gateway enforcement examples (Kong, Envoy, AWS API Gateway)
-- [ ] Framework adapter interface definition
-- [ ] Conformance test suite
+- **ACP Cloud** — hosted agent identity infrastructure (managed issuer, credential lifecycle, multi-tenant)
+- Enterprise SSO integration (SAML, OIDC federation)
+- Multi-tenant organization and team management
+- Framework SDK marketplace and gateway plugin registry
+- Agent-to-agent authentication patterns
+- Hardware-backed attestation (TPM, Nitro Enclaves, Confidential Compute)
+- PostgreSQL deployment and Alembic migrations
 
 ---
 
-## Medium-term
+## Later (v1.0+)
 
-- Hardware-backed attestation semantics (TPM, Nitro Enclaves, Cloud Confidential Compute)
-- Agent-to-agent authorization model
-- Revocation at scale (CRL / OCSP equivalents for agent credentials)
-- Cross-issuer federation design
+- Cross-issuer federation (multi-cloud, multi-vendor trust)
+- Revocation at scale (CRL/OCSP equivalents for agent credentials)
+- Compliance certifications (SOC 2, NIST AI RMF alignment)
 - Model provenance claims (optional extension)
-- Standardized delegation chain representation
+- Formal standards contribution (IETF, OpenID Foundation)
 
 ---
 
-## What AIS will not do
+## Design Boundaries
 
-AIS is an identity layer. It is explicitly not trying to:
+AIS is the **identity and verification layer**. It answers: *who is this agent, who issued that identity, and can I verify it?*
 
-- Define authorization policy (that is the control plane's job)
-- Replace OIDC or OAuth for human users
-- Specify agent orchestration or execution
-- Provide a managed identity service
-- Define model governance or evaluation standards
-
----
-
-## Versioning
-
-AIS follows SemVer:
-- **Patch** — clarifications, example corrections, non-normative changes
-- **Minor** — new optional features, backward-compatible normative additions
-- **Major** — breaking changes to required claims, flows, or protocol structure
+What AIS deliberately leaves to the control plane:
+- Authorization policy (allow/deny decisions)
+- Agent orchestration and execution
+- Model governance and evaluation
+- Managed identity-as-a-service (that's ACP Cloud)

@@ -31,9 +31,9 @@ dev = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/nokoro27/agent-identity"
-Specification = "https://github.com/nokoro27/agent-identity/blob/main/ais/SPEC.md"
-Issues = "https://github.com/nokoro27/agent-identity/issues"
+Homepage = "https://github.com/experiments-hq/agentic-identity"
+Specification = "https://github.com/experiments-hq/agentic-identity/blob/main/spec/SPEC.md"
+Issues = "https://github.com/experiments-hq/agentic-identity/issues"
 
 [tool.setuptools.packages.find]
 where = ["."]
