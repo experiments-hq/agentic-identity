@@ -191,7 +191,14 @@ from fastapi import Depends
 
 
 def _issuer_base_url(request: Request) -> str:
-    return str(request.base_url).rstrip("/")
+    if settings.issuer_url != "http://localhost:8000":
+        return settings.issuer_url.rstrip("/")
+    base = str(request.base_url).rstrip("/")
+    # Respect X-Forwarded-Proto from reverse proxies (Railway, Render, etc.)
+    proto = request.headers.get("x-forwarded-proto")
+    if proto == "https" and base.startswith("http://"):
+        base = "https://" + base[len("http://"):]
+    return base
 
 
 @app.get("/.well-known/agent-issuer", tags=["identity"])

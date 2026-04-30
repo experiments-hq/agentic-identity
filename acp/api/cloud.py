@@ -56,7 +56,9 @@ async def signup(
 
         await seed_demo_data_for_org(db, org_id=org_id)
 
-    base_url = str(request.base_url).rstrip("/")
+    from acp.main import _issuer_base_url
+
+    base_url = _issuer_base_url(request)
 
     return SignupResponse(
         org_id=org_id,
