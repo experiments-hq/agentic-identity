@@ -1,9 +1,11 @@
 """ACP global configuration — loaded from environment variables or .env file."""
 from __future__ import annotations
 
+import os
 from pathlib import Path
 from typing import Literal
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,8 +23,24 @@ class Settings(BaseSettings):
     secret_key: str = "acp-dev-secret-key-change-me"
     admin_token: str = "acp-demo-admin-token"  # bootstrap admin API token for local demo/dev
 
+    # ── Cloud ──────────────────────────────────────────────────────────────────
+    cloud_mode: bool = False  # set ACP_CLOUD_MODE=true on Railway
+
     # ── Database ──────────────────────────────────────────────────────────────
     database_url: str = "sqlite+aiosqlite:///./acp.db"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _railway_database_url(cls, values):
+        """Railway provides DATABASE_URL — convert to asyncpg format for SQLAlchemy."""
+        railway_url = os.getenv("DATABASE_URL")
+        if railway_url and not os.getenv("ACP_DATABASE_URL"):
+            if railway_url.startswith("postgresql://"):
+                railway_url = railway_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+            elif railway_url.startswith("postgres://"):
+                railway_url = railway_url.replace("postgres://", "postgresql+asyncpg://", 1)
+            values["database_url"] = railway_url
+        return values
 
     # ── Proxy ─────────────────────────────────────────────────────────────────
     host: str = "0.0.0.0"

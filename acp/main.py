@@ -29,11 +29,11 @@ async def lifespan(app: FastAPI):
 
     if settings.is_production:
         errors: list[str] = []
-        if settings.admin_token == _DEFAULT_ADMIN_TOKEN:
+        if not settings.cloud_mode and settings.admin_token == _DEFAULT_ADMIN_TOKEN:
             errors.append("ACP_ADMIN_TOKEN is set to the default demo value — set a strong secret")
         if settings.secret_key == _DEFAULT_SECRET_KEY:
             errors.append("ACP_SECRET_KEY is set to the default dev value — set a strong secret")
-        if settings.cors_allowed_origins == ["*"]:
+        if not settings.cloud_mode and settings.cors_allowed_origins == ["*"]:
             errors.append("ACP_CORS_ALLOWED_ORIGINS is '*' — restrict to your console origin")
         if errors:
             for msg in errors:
@@ -83,6 +83,7 @@ from acp.api.audit import router as audit_router
 from acp.api.demo import router as demo_router
 from acp.api.attestations import router as attestations_router
 from acp.api.session import SESSION_COOKIE, router as session_router
+from acp.api.cloud import router as cloud_router
 
 app.include_router(agents_router)
 app.include_router(policies_router)
@@ -94,22 +95,50 @@ app.include_router(audit_router)
 app.include_router(demo_router)
 app.include_router(session_router)
 app.include_router(attestations_router)
+app.include_router(cloud_router)
 app.mount("/console", StaticFiles(directory="acp/console", html=True), name="console")
 
 
 @app.middleware("http")
 async def require_operator_session(request: Request, call_next):
     path = request.url.path
-    if not path.startswith("/api/") or path.startswith("/api/session/") or os.getenv("PYTEST_CURRENT_TEST"):
+    if (
+        not path.startswith("/api/")
+        or path.startswith("/api/session/")
+        or path.startswith("/api/cloud/signup")
+        or os.getenv("PYTEST_CURRENT_TEST")
+    ):
         return await call_next(request)
 
     presented_token = request.cookies.get(SESSION_COOKIE) or request.headers.get("x-acp-admin-token", "")
-    if not secrets.compare_digest(presented_token, settings.admin_token):
+    if not presented_token:
         return JSONResponse(
             status_code=status.HTTP_401_UNAUTHORIZED,
             content={"detail": "Admin authentication required"},
         )
-    return await call_next(request)
+
+    # Check global admin token
+    if secrets.compare_digest(presented_token, settings.admin_token):
+        return await call_next(request)
+
+    # Check per-tenant cloud token
+    from acp.models.tenant import Tenant
+    from sqlalchemy import select
+
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Tenant).where(Tenant.admin_token == presented_token)
+        )
+        tenant = result.scalar_one_or_none()
+
+    if tenant is not None:
+        request.state.tenant_org_id = tenant.org_id
+        return await call_next(request)
+
+    return JSONResponse(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        content={"detail": "Admin authentication required"},
+    )
 
 
 # ── Proxy routes — all LLM traffic flows through here ────────────────────────
@@ -196,8 +225,15 @@ async def health():
     return {"status": "ok", "version": "0.1.0", "env": settings.env}
 
 
-@app.get("/", tags=["system"])
-async def root():
+@app.get("/", tags=["system"], include_in_schema=False)
+async def root(request: Request):
+    if settings.cloud_mode:
+        from acp.landing import LANDING_HTML
+        from fastapi.responses import HTMLResponse
+
+        base_url = str(request.base_url).rstrip("/")
+        html = LANDING_HTML.replace("{BASE_URL}", base_url)
+        return HTMLResponse(content=html)
     return {
         "name": "Agent Control Plane",
         "version": "0.1.0",

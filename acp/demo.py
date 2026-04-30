@@ -569,3 +569,32 @@ async def seed_demo_data(db, *, replace_existing: bool = True) -> dict[str, int]
         "traces": len(DEMO_TRACE_IDS),
         "approvals": len(DEMO_APPROVAL_IDS),
     }
+
+
+async def seed_demo_data_for_org(db, *, org_id: str) -> dict[str, int]:
+    """Seed a lightweight demo dataset for a newly signed-up cloud org."""
+    from acp.primitives.identity.service import register_agent
+
+    agents_specs = [
+        {
+            "team_id": "team-default",
+            "display_name": "Demo Agent",
+            "framework": "custom",
+            "environment": "development",
+            "tags": {"demo": "true"},
+        },
+    ]
+
+    for spec in agents_specs:
+        await register_agent(
+            db,
+            org_id=org_id,
+            team_id=spec["team_id"],
+            display_name=spec["display_name"],
+            framework=spec["framework"],
+            environment=spec["environment"],
+            created_by="cloud-signup",
+            tags=spec["tags"],
+        )
+
+    return {"agents": len(agents_specs)}

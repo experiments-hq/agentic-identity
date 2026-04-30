@@ -6,3 +6,4 @@ from acp.models.approval import ApprovalRequest, ApprovalDecision  # noqa: F401
 from acp.models.trace import AgentTrace, TraceSpan  # noqa: F401
 from acp.models.budget import BudgetLimit, BudgetUsage, BudgetAlert  # noqa: F401
 from acp.models.audit import AuditEvent, ReplaySession  # noqa: F401
+from acp.models.tenant import Tenant  # noqa: F401
